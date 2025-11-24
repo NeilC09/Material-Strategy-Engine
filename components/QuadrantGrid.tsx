@@ -1,10 +1,10 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Leaf, ShieldCheck, Droplet, Microscope, ArrowRight, X, 
   Activity, FileText, Globe, Bot, Send, Loader2, ExternalLink, Layers, AlertTriangle, Factory, Sparkles
 } from 'lucide-react';
-import { QuadrantType, NewsItem, ChatMessage, MaterialFamily } from '../types';
-import { SharedContext } from '../App';
+import { QuadrantType, NewsItem, ChatMessage, MaterialFamily, SharedContext } from '../types';
 import { searchMarketIntel, askQuadrantQuestion, discoverEmergingPolymers } from '../services/geminiService';
 
 interface QuadrantGridProps {
@@ -336,7 +336,7 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
                                <span className="font-bold text-white text-lg">{fam.name}</span>
                                <div className="opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity">
                                   <button 
-                                    onClick={() => onNavigate('factory', { material: fam.name })}
+                                    onClick={() => onNavigate('workstation', { material: fam.name, workstationStep: 'build' })}
                                     className="text-[10px] bg-white text-black px-3 py-1.5 font-bold uppercase hover:bg-gray-200 flex items-center gap-2"
                                   >
                                     <Factory size={12} /> Build
@@ -365,6 +365,14 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
                                <span className="font-bold text-cyan-400 flex items-center gap-2">
                                   <Sparkles size={14} /> {fam.name}
                                </span>
+                               <div className="opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity">
+                                  <button 
+                                    onClick={() => onNavigate('workstation', { material: fam.name, workstationStep: 'build' })}
+                                    className="text-[10px] bg-cyan-400 text-black px-3 py-1.5 font-bold uppercase hover:bg-cyan-300 flex items-center gap-2"
+                                  >
+                                    <Factory size={12} /> Build
+                                  </button>
+                               </div>
                             </div>
                             <p className="text-sm text-cyan-200/70 font-mono mb-3">{fam.description}</p>
                             <div className="flex flex-wrap gap-2">

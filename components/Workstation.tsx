@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Sparkles, FlaskConical, Factory, ChevronRight, Save, Layers, AlertTriangle, CheckCircle2, Sliders, Terminal, Activity } from 'lucide-react';
 import InnovationLab from './InnovationLab';
 import MaterialAnalyzer from './MaterialAnalyzer';
 import FactorySimulator from './Factory';
-import { ProjectState, MaterialRecipe, AnalysisResult } from '../types';
-import { SharedContext } from '../App';
+import { ProjectState, MaterialRecipe, AnalysisResult, SharedContext } from '../types';
 
 interface WorkstationProps {
   onNavigate: (tab: string, data?: SharedContext) => void;
   onSaveToLibrary: (recipe: MaterialRecipe, image?: string) => void;
+  initialContext?: SharedContext;
 }
 
-const Workstation: React.FC<WorkstationProps> = ({ onNavigate, onSaveToLibrary }) => {
+const Workstation: React.FC<WorkstationProps> = ({ onNavigate, onSaveToLibrary, initialContext }) => {
   const [activeStep, setActiveStep] = useState<'design' | 'analyze' | 'build'>('design');
   
   // Unified Project State
@@ -21,6 +22,23 @@ const Workstation: React.FC<WorkstationProps> = ({ onNavigate, onSaveToLibrary }
     status: 'ideation',
     lastModified: new Date(),
   });
+
+  // Handle initialization from Context (e.g. coming from Dashboard)
+  useEffect(() => {
+    if (initialContext) {
+      if (initialContext.workstationStep) {
+        setActiveStep(initialContext.workstationStep);
+      }
+      if (initialContext.material) {
+        setProject(prev => ({
+          ...prev,
+          name: initialContext.material || 'Untitled Project',
+          // If jumping straight to build, assume it's ready for simulation (or at least selected)
+          status: initialContext.workstationStep === 'build' ? 'production_ready' : 'ideation'
+        }));
+      }
+    }
+  }, [initialContext]);
 
   const handleRecipeUpdate = (recipe: MaterialRecipe, image?: string) => {
     setProject(prev => ({

@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { FlaskConical, Loader2, ArrowRight, AlertTriangle, Layers, Settings, Image as ImageIcon, Wand2, Factory, Scale, FileText, Brain, Sparkles, CheckCircle2 } from 'lucide-react';
 import { analyzeMaterial, generateMaterialImage } from '../services/geminiService';
-import { AnalysisResult, QuadrantType } from '../types';
-import { SharedContext } from '../App';
+import { AnalysisResult, QuadrantType, SharedContext } from '../types';
 
 interface MaterialAnalyzerProps {
   onNavigate: (tab: string, data?: SharedContext) => void;

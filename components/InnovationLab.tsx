@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, Wand2, Loader2, Save, TestTube2, Image as ImageIcon, Factory, FileText, CheckCircle2, FlaskConical, ArrowRight, FileUp, ChefHat, ScrollText, Lightbulb, Scan } from 'lucide-react';
 import { generateMaterialRecipe, generateMaterialImage, extractRecipeFromPatent } from '../services/geminiService';
-import { MaterialRecipe } from '../types';
-import { SharedContext } from '../App';
+import { MaterialRecipe, SharedContext } from '../types';
 
 interface InnovationLabProps {
   onSave: (recipe: MaterialRecipe, image?: string) => void;

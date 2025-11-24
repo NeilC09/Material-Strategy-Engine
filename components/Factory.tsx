@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Factory as FactoryIcon, Settings, ArrowLeft, Box, Wind, Layers, Droplet, Cog, Cpu, Thermometer, Search, ShoppingBag, Globe, Loader2, ExternalLink, Activity, Play, Pause, CheckCircle2, XCircle, Zap, RotateCcw } from 'lucide-react';
-import { ManufacturingProcess, Manufacturer } from '../types';
+import { ManufacturingProcess, Manufacturer, SharedContext } from '../types';
 import { findManufacturers } from '../services/geminiService';
-import { SharedContext } from '../App';
 
 interface FactoryProps {
   initialMaterial?: string;

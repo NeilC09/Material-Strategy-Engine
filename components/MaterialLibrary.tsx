@@ -1,8 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { BookMarked, Search, Filter, LayoutGrid, List, Calendar, Tag, Factory, X } from 'lucide-react';
-import { LibraryItem, QuadrantType } from '../types';
-import { SharedContext } from '../App';
+import { LibraryItem, QuadrantType, SharedContext } from '../types';
 
 interface MaterialLibraryProps {
   items: LibraryItem[];
@@ -199,7 +198,7 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({ items, onNavigate }) 
                      </div>
 
                      <button 
-                        onClick={() => onNavigate('factory', { material: item.name })}
+                        onClick={() => onNavigate('workstation', { material: item.name, workstationStep: 'build' })}
                         className="w-full py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 flex items-center justify-center gap-2"
                      >
                         <Factory size={14} /> Simulate

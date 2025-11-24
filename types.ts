@@ -137,3 +137,10 @@ export interface ProjectState {
   image?: string;
   selectedProcess?: string;
 }
+
+export interface SharedContext {
+  material?: string; // For Analyzer and Factory
+  query?: string;    // For Patents
+  problem?: string;  // For Innovation Lab
+  workstationStep?: 'design' | 'analyze' | 'build'; // To navigate directly to a specific lab
+}
