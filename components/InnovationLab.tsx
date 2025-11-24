@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Wand2, Loader2, Save, TestTube2, Image as ImageIcon, Factory, FileText, CheckCircle2, FlaskConical } from 'lucide-react';
+import { Sparkles, Wand2, Loader2, Save, TestTube2, Image as ImageIcon, Factory, FileText, CheckCircle2, FlaskConical, ArrowRight } from 'lucide-react';
 import { generateMaterialRecipe, generateMaterialImage } from '../services/geminiService';
 import { MaterialRecipe } from '../types';
 import { SharedContext } from '../App';
@@ -9,9 +9,10 @@ interface InnovationLabProps {
   onSave: (recipe: MaterialRecipe, image?: string) => void;
   onNavigate: (tab: string, data?: SharedContext) => void;
   initialProblem?: string;
+  embeddedMode?: boolean; // New prop for workstation integration
 }
 
-const InnovationLab: React.FC<InnovationLabProps> = ({ onSave, onNavigate, initialProblem }) => {
+const InnovationLab: React.FC<InnovationLabProps> = ({ onSave, onNavigate, initialProblem, embeddedMode = false }) => {
   const [problem, setProblem] = useState('');
   const [loading, setLoading] = useState(false);
   const [recipe, setRecipe] = useState<MaterialRecipe | null>(null);
@@ -31,13 +32,16 @@ const InnovationLab: React.FC<InnovationLabProps> = ({ onSave, onNavigate, initi
     setImage(null);
 
     try {
-      // Run in parallel for speed
       const [rec, img] = await Promise.all([
         generateMaterialRecipe(problem),
         generateMaterialImage(problem)
       ]);
       setRecipe(rec);
       setImage(img);
+      // Auto-save to parent workstation state if in embedded mode
+      if (embeddedMode) {
+          onSave(rec, img);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -45,17 +49,18 @@ const InnovationLab: React.FC<InnovationLabProps> = ({ onSave, onNavigate, initi
   };
 
   return (
-    <div className="max-w-5xl mx-auto animate-fade-in pb-20">
-      <div className="mb-10">
-        <div className="flex items-center gap-2 text-indigo-600 mb-2 font-medium">
-           <Sparkles size={18} /> Innovation Engine
+    <div className={`max-w-5xl mx-auto ${embeddedMode ? '' : 'animate-fade-in pb-20'}`}>
+      {!embeddedMode && (
+        <div className="mb-10">
+            <div className="flex items-center gap-2 text-indigo-600 mb-2 font-medium">
+            <Sparkles size={18} /> Innovation Engine
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Generative Material Design</h1>
+            <p className="text-gray-500 max-w-2xl">
+            Describe a problem or application. The engine will invent a formulation, define commercial potential, and render a prototype.
+            </p>
         </div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Generative Material Design</h1>
-        <p className="text-gray-500 max-w-2xl">
-          Describe a problem or application (e.g., "A transparent, heat-resistant packaging film made from seaweed"). 
-          The engine will invent a formulation, define commercial potential, and render a prototype.
-        </p>
-      </div>
+      )}
 
       {/* Input Section */}
       <form onSubmit={handleGenerate} className="relative mb-12 group">
@@ -64,8 +69,9 @@ const InnovationLab: React.FC<InnovationLabProps> = ({ onSave, onNavigate, initi
            <input 
              value={problem}
              onChange={(e) => setProblem(e.target.value)}
-             placeholder="What do you want to invent today?"
+             placeholder="Describe target application (e.g. 'Heat resistant bio-plastic for coffee cups')"
              className="flex-1 text-lg px-4 py-3 outline-none text-gray-900 placeholder-gray-400 bg-transparent"
+             autoFocus={!embeddedMode}
            />
            <button 
              type="submit"
@@ -80,13 +86,17 @@ const InnovationLab: React.FC<InnovationLabProps> = ({ onSave, onNavigate, initi
 
       {/* Results Section */}
       {loading && (
-         <div className="text-center py-20">
-            <div className="inline-block p-4 bg-gray-50 rounded-full mb-4 relative">
+         <div className="text-center py-20 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+            <div className="inline-block p-4 bg-white rounded-full mb-4 relative shadow-sm border border-gray-100">
                <Loader2 className="animate-spin text-indigo-600" size={32} />
                <Sparkles className="absolute top-0 right-0 text-purple-500 animate-pulse" size={16} />
             </div>
-            <h3 className="text-lg font-medium text-gray-900">Synthesizing Formulation...</h3>
-            <p className="text-gray-400 text-sm mt-2">Analyzing market fit • rendering textures • defining supply chain</p>
+            <h3 className="text-lg font-bold text-gray-900">Synthesizing Formulation...</h3>
+            <div className="flex justify-center gap-8 mt-6 text-xs font-medium text-gray-400">
+                <span className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-500" /> Analyzing Market Fit</span>
+                <span className="flex items-center gap-2"><Loader2 size={14} className="animate-spin text-indigo-500" /> Defining Chemistry</span>
+                <span className="flex items-center gap-2"><ImageIcon size={14} /> Rendering Prototype</span>
+            </div>
          </div>
       )}
 
@@ -117,43 +127,27 @@ const InnovationLab: React.FC<InnovationLabProps> = ({ onSave, onNavigate, initi
                  </div>
               </div>
 
-              <div className="flex flex-col gap-3">
-                 <button 
-                   onClick={() => onSave(recipe, image || undefined)}
-                   className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 shadow-sm"
-                 >
-                    <Save size={16} /> Save to Registry
-                 </button>
-                 
-                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-2 mb-1 text-center">Validate & Launch</h4>
-                 
-                 <div className="flex gap-2">
-                    <button 
-                      onClick={() => onNavigate('analyze', { material: recipe.name })}
-                      className="flex-1 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium text-xs hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-all flex flex-col items-center justify-center gap-1"
-                    >
-                        <FlaskConical size={14} /> Logic Lab
-                    </button>
-                    <button 
-                      onClick={() => onNavigate('factory', { material: recipe.name })}
-                      className="flex-1 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium text-xs hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 transition-all flex flex-col items-center justify-center gap-1"
-                    >
-                        <Factory size={14} /> Find Makers
-                    </button>
-                 </div>
-              </div>
+              {!embeddedMode && (
+                  <button 
+                    onClick={() => onSave(recipe, image || undefined)}
+                    className="w-full py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 shadow-sm"
+                  >
+                        <Save size={16} /> Save to Registry
+                  </button>
+              )}
            </div>
 
            {/* Right: Engineering Blueprint */}
            <div className="lg:col-span-2 space-y-6">
               {/* Recipe Card */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+              <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full opacity-50 pointer-events-none"></div>
                  <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
                     <TestTube2 size={20} className="text-indigo-500" /> Formulation Recipe
                  </h3>
-                 <div className="space-y-3">
+                 <div className="space-y-3 relative z-10">
                     {recipe.ingredients.map((ing, i) => (
-                       <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                       <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100 hover:border-indigo-200 transition-colors">
                           <div>
                              <span className="font-bold text-gray-900 block">{ing.name}</span>
                              <span className="text-xs text-gray-500">{ing.function}</span>
@@ -167,15 +161,15 @@ const InnovationLab: React.FC<InnovationLabProps> = ({ onSave, onNavigate, initi
               {/* Commercial Potential */}
               <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
                  <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <CheckCircle2 size={20} className="text-emerald-600" /> Commercial Potential
+                    <CheckCircle2 size={20} className="text-emerald-600" /> Commercial Applications
                  </h3>
-                 <div className="grid grid-cols-1 gap-4">
+                 <div className="grid grid-cols-2 gap-4">
                     {recipe.applications.map((app, i) => (
                        <div key={i} className="p-4 border border-gray-100 rounded-xl hover:shadow-md transition-shadow flex items-center gap-3">
-                          <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold text-xs shrink-0">
+                          <div className="w-6 h-6 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 font-bold text-xs shrink-0">
                              {i + 1}
                           </div>
-                          <span className="text-gray-800 font-medium">{app}</span>
+                          <span className="text-gray-800 font-medium text-sm">{app}</span>
                        </div>
                     ))}
                  </div>

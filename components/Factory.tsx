@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Factory as FactoryIcon, Settings, ArrowLeft, Box, Wind, Layers, Droplet, Cog, Cpu, Thermometer, Search, ShoppingBag, Globe, Loader2, ExternalLink, Activity, Sparkles, FlaskConical } from 'lucide-react';
+import { Factory as FactoryIcon, Settings, ArrowLeft, Box, Wind, Layers, Droplet, Cog, Cpu, Thermometer, Search, ShoppingBag, Globe, Loader2, ExternalLink, Activity, Sparkles, FlaskConical, AlertTriangle } from 'lucide-react';
 import { ManufacturingProcess, Manufacturer } from '../types';
 import { findManufacturers } from '../services/geminiService';
 import { SharedContext } from '../App';
@@ -8,6 +8,7 @@ import { SharedContext } from '../App';
 interface FactoryProps {
   initialMaterial?: string;
   onNavigate?: (tab: string, data?: SharedContext) => void;
+  constraints?: string[]; // New: constraints from the Analyzer
 }
 
 const processes: ManufacturingProcess[] = [
@@ -69,7 +70,7 @@ const processes: ManufacturingProcess[] = [
   }
 ];
 
-const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate }) => {
+const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constraints = [] }) => {
   const [selectedProcess, setSelectedProcess] = useState<ManufacturingProcess | null>(null);
   const [materialContext, setMaterialContext] = useState(initialMaterial || 'Bio-Material');
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
@@ -100,50 +101,46 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate }) => {
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in pb-20">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-           <div className="p-3 bg-gray-900 text-white rounded-lg">
-             <FactoryIcon size={24} />
-           </div>
-           <div>
-             <h1 className="text-2xl font-bold text-gray-900">The Factory</h1>
-             <p className="text-gray-500 text-sm">Commercial Discovery & Product Strategy</p>
-           </div>
-        </div>
-        {materialContext && (
-          <div className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full text-sm font-medium flex items-center gap-2 shadow-sm">
-            <Settings size={14} /> Context: {materialContext}
-          </div>
-        )}
-      </div>
-
       {!selectedProcess ? (
         /* GRID VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {processes.map((proc) => (
-            <div 
-              key={proc.id}
-              onClick={() => setSelectedProcess(proc)}
-              className="group bg-white border border-gray-200 rounded-xl p-6 cursor-pointer hover:shadow-notion hover:-translate-y-1 transition-all relative overflow-hidden"
-            >
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                 <proc.icon size={64} className="text-gray-900" />
-              </div>
-              <div className="mb-4 p-2 bg-gray-50 rounded-lg w-fit">
-                 <proc.icon size={24} className="text-gray-700" />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">{proc.name}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed mb-4 line-clamp-3">{proc.description}</p>
-              
-              <div className="flex flex-wrap gap-1.5 mt-auto">
-                 {proc.outputs.slice(0, 2).map(out => (
-                    <span key={out} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">{out}</span>
-                 ))}
-                 {proc.outputs.length > 2 && <span className="text-[10px] text-gray-400 py-1">+ {proc.outputs.length - 2} more</span>}
-              </div>
-            </div>
-          ))}
+          {processes.map((proc) => {
+            // Smart Highlighting based on constraints
+            const warning = constraints.some(c => 
+                (c.toLowerCase().includes('heat') && proc.id === 'injection') ||
+                (c.toLowerCase().includes('moisture') && proc.id === 'fiber') ||
+                (c.toLowerCase().includes('melt') && proc.id === 'film')
+            );
+
+            return (
+                <div 
+                key={proc.id}
+                onClick={() => setSelectedProcess(proc)}
+                className={`group bg-white border rounded-xl p-6 cursor-pointer hover:shadow-notion hover:-translate-y-1 transition-all relative overflow-hidden ${warning ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'}`}
+                >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <proc.icon size={64} className="text-gray-900" />
+                </div>
+                <div className="mb-4 p-2 bg-gray-50 rounded-lg w-fit">
+                    <proc.icon size={24} className="text-gray-700" />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2">{proc.name}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed mb-4 line-clamp-3">{proc.description}</p>
+                
+                {warning && (
+                    <div className="mb-4 px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
+                        <AlertTriangle size={10} /> Constraint Detected
+                    </div>
+                )}
+
+                <div className="flex flex-wrap gap-1.5 mt-auto">
+                    {proc.outputs.slice(0, 2).map(out => (
+                        <span key={out} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">{out}</span>
+                    ))}
+                </div>
+                </div>
+            );
+          })}
         </div>
       ) : (
         /* DETAIL VIEW (DASHBOARD) */
@@ -154,6 +151,28 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate }) => {
            >
              <ArrowLeft size={16} /> Return to Floor
            </button>
+
+           {/* Constraint Warning Banner */}
+           {constraints.length > 0 && (
+               <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-3">
+                   <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
+                       <AlertTriangle size={20} />
+                   </div>
+                   <div>
+                       <h4 className="font-bold text-amber-900 text-sm">Processing Constraints Active</h4>
+                       <p className="text-amber-800 text-xs mt-1">
+                           The validation logic identified risks for this material. Ensure {selectedProcess.name} parameters account for:
+                       </p>
+                       <div className="flex flex-wrap gap-2 mt-2">
+                           {constraints.map((c, i) => (
+                               <span key={i} className="px-2 py-1 bg-white/50 border border-amber-200 rounded text-xs text-amber-900 font-medium">
+                                   {c}
+                               </span>
+                           ))}
+                       </div>
+                   </div>
+               </div>
+           )}
 
            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
@@ -174,35 +193,6 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate }) => {
                        {selectedProcess.runLogic}
                     </p>
                  </div>
-                 
-                 {/* Workflow Links */}
-                 {onNavigate && (
-                   <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Engineer's Toolkit</h3>
-                      <div className="space-y-2">
-                         <button 
-                           onClick={() => onNavigate('innovation', { problem: `Optimize ${materialContext} for ${selectedProcess.name}` })}
-                           className="w-full text-left p-3 rounded-lg border border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all flex items-center gap-3 group"
-                         >
-                            <div className="p-2 bg-purple-100 text-purple-600 rounded-md group-hover:bg-purple-200"><Sparkles size={16} /></div>
-                            <div>
-                               <div className="text-sm font-bold text-gray-800">Invent Grade</div>
-                               <div className="text-[10px] text-gray-500">Generate custom recipe</div>
-                            </div>
-                         </button>
-                         <button 
-                           onClick={() => onNavigate('analyze', { material: `${materialContext} in ${selectedProcess.name}` })}
-                           className="w-full text-left p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all flex items-center gap-3 group"
-                         >
-                            <div className="p-2 bg-blue-100 text-blue-600 rounded-md group-hover:bg-blue-200"><FlaskConical size={16} /></div>
-                            <div>
-                               <div className="text-sm font-bold text-gray-800">Analyze Constraints</div>
-                               <div className="text-[10px] text-gray-500">Deep logic check</div>
-                            </div>
-                         </button>
-                      </div>
-                   </div>
-                 )}
               </div>
 
               {/* Right Column: Commercial Discovery Engine */}
@@ -244,15 +234,7 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate }) => {
                        {!loading && hasSearched && manufacturers.length === 0 && (
                           <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center">
                              <span>No specific products found on the open market.</span>
-                             <span className="text-xs mt-2 mb-4 block">Try a more common material term (e.g. "PHA" instead of "Biopolymer").</span>
-                             {onNavigate && (
-                                <button 
-                                  onClick={() => onNavigate('innovation', { problem: `Invent a ${materialContext} product using ${selectedProcess.name}` })}
-                                  className="text-indigo-600 font-bold text-sm flex items-center gap-1 hover:underline"
-                                >
-                                  <Sparkles size={14} /> Invent it yourself in Lab
-                                </button>
-                             )}
+                             <span className="text-xs mt-2 mb-4 block">Try a more common material term.</span>
                           </div>
                        )}
 

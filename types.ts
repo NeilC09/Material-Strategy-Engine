@@ -120,3 +120,15 @@ export interface Manufacturer {
   description: string;
   website: string;
 }
+
+// NEW: Unified Project State for Workstation
+export interface ProjectState {
+  id: string;
+  name: string;
+  status: 'ideation' | 'analyzing' | 'production_ready';
+  lastModified: Date;
+  recipe?: MaterialRecipe;
+  analysis?: AnalysisResult;
+  image?: string;
+  selectedProcess?: string;
+}
