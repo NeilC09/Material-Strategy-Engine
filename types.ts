@@ -59,6 +59,7 @@ export interface Patent {
   assignee: string;
   snippet: string;
   url: string;
+  date?: string;
 }
 
 export interface MaterialProperty {
@@ -143,4 +144,11 @@ export interface SharedContext {
   query?: string;    // For Patents
   problem?: string;  // For Innovation Lab
   workstationStep?: 'design' | 'analyze' | 'build'; // To navigate directly to a specific lab
+}
+
+// NEW: 3D Visualization Data Structure for Plotly
+export interface VisualizationData {
+  data: any[]; // Plotly Data Array
+  layout: any; // Plotly Layout Object
+  explanation?: string;
 }

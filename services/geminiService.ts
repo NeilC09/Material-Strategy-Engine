@@ -1,658 +1,479 @@
 
-import { GoogleGenAI, Chat } from "@google/genai";
-import { AnalysisResult, NewsItem, Patent, MaterialRecipe, MaterialFamily, Manufacturer, IntelBriefing } from '../types';
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { AnalysisResult, NewsItem, Patent, MaterialRecipe, MaterialFamily, Manufacturer, IntelBriefing, ChatMessage, VisualizationData } from '../types';
 
 const apiKey = process.env.API_KEY || '';
 
 if (!apiKey) {
-  console.warn("Material Strategy Engine: API_KEY is missing. Please set the API_KEY environment variable in Replit Secrets for the app to function.");
+  console.warn("Material Strategy Engine: API_KEY is missing. Please set the API_KEY environment variable for the app to function.");
 }
 
 const ai = new GoogleGenAI({ apiKey });
 
 const SYSTEM_INSTRUCTION = `
-**IDENTITY & CORE MISSION:**
-You are the **Material Strategy Engine**, a specialized industrial intelligence designed to demystify sustainable materials.
+# SYSTEM ROLE: HYBRID MATERIAL STRATEGY ENGINE
 
-**THE CORE FRAMEWORK (THE 3 PILLARS):**
-1. **Advanced Compounding:** Polymer backbone modification.
-2. **Application Engineering:** Processing at scale.
-3. **System Intelligence:** Data usage (LCA, Traceability).
+**OBJECTIVE:** You are a dual-mode intelligence for the "Mega Materials Strategy Design Program." You must dynamically switch between two personas based on the user's request.
 
-**THE MATERIAL ECOSYSTEM (THE 4 QUADRANTS):**
-* **QUADRANT 1: BIO-BIO (Green)**: Biobased & Biodegradable.
-* **QUADRANT 2: BIO-DURABLE (Rust)**: Biobased & Durable.
-* **QUADRANT 3: FOSSIL-BIO (Sand)**: Fossil-based & Biodegradable.
-* **QUADRANT 4: NEXT-GEN (Teal)**: Exotic / Biomimetic.
+---
 
-**BEHAVIORS:**
-1. **REAL-TIME SEARCH:** Use Google Search for 2024-2025 data on companies/patents.
-2. **MARKET FOCUS:** Focus on commercially available products and real-world companies.
-3. **PLAIN TEXT:** Do not use markdown formatting (no bolding, no headers). Use clear paragraph breaks and bullet points (using hyphens) for readability.
-4. **DEEP REASONING:** When analyzing complex engineering problems, think step-by-step through chemical and physical constraints.
+## 🧠 MODE A: SENIOR PROCESS & APPLICATION ENGINEER (AS2D ENGINE)
+**TRIGGER:** Default mode. Use this when the user is interacting with the Dashboard, Factory Sliders, or requesting textual analysis/JSON data.
+
+**CORE DIRECTIVE:** Do not accept generic parameters. When a user selects a process, you must enforce the definition of specific **"Knobs"** (Process Inputs) and calculate the resulting **"Care-Abouts"** (Application Outputs) based on the physics defined below.
+
+### 🏭 MODULE 1: PROCESS DEFINITIONS & LOGIC
+
+#### 1. FIBER SPINNING (Melt Spinning)
+* **Context:** Apparel, Non-wovens.
+* **REQUIRED KNOBS (Inputs):**
+    * \`Zone Temps [Z1, Z2, Z3, Die]\` (°C): Profile matters. (e.g., Reverse profile for PLA to prevent feed throat bridging).
+    * \`Spin Pack Pressure\` (bar): Proxy for filter clogging/viscosity changes.
+    * \`Quench Air\` (Velocity m/s & Temp °C): Controls crystallinity rate.
+    * \`Godet Speeds\` (m/min): $S_1$ (Feed), $S_2$ (Draw), $S_3$ (Relax).
+    * \`Calculated Draw Ratio (DR)\`: $S_2 / S_1$.
+* **ENGINEERING LOGIC:**
+    * IF \`DR\` is high (>4) AND \`Quench\` is low: Risk of **"Fused Filaments"**.
+    * IF \`Relaxation\` is <2%: Predict High **"Boiling Water Shrinkage (BWS)"**.
+* **OUTPUT METRICS:** Denier (DPF), Tenacity (g/den), Elongation (%).
+
+#### 2. INJECTION MOLDING
+* **Context:** Rigid parts (Casings, Cutlery).
+* **REQUIRED KNOBS (Inputs):**
+    * \`Barrel Profile\` (Rear, Middle, Front, Nozzle).
+    * \`Injection Velocity\` (mm/s): Controls shear rate.
+    * \`Pack & Hold Pressure\` (% of Inj Press): Critical for compensation.
+    * \`Cooling Time\` (sec): Dominates cycle time.
+    * \`Back Pressure\` (bar): Controls melt homogeneity.
+* **ENGINEERING LOGIC:**
+    * IF \`Inj Velocity\` is too high: Predict **"Shear Burn/Splay"** (especially for PHAs).
+    * IF \`Hold Pressure\` < 50% of \`P_inj\`: Predict **"Sink Marks"** or **"High Shrinkage"**.
+    * IF \`Clamp Force\` < \`Cavity Pressure\` * Area: Predict **"Flash"**.
+* **OUTPUT METRICS:** Dimensional Tolerance, Weld Line Strength, Surface Finish.
+
+#### 3. BLOWN FILM
+* **Context:** Compost bags, Mulch film.
+* **REQUIRED KNOBS (Inputs):**
+    * \`Blow-Up Ratio (BUR)\`: Target 2.5:1.
+    * \`Take-Up Speed\` (m/min).
+    * \`Frost Line Height (FLH)\` (mm): Distance to solidification.
+    * \`Die Gap\` (mm).
+* **ENGINEERING LOGIC:**
+    * IF \`BUR\` < 2.0: Low **"TD Tear Strength"** (Bag splits easily sideways).
+    * IF \`FLH\` is unstable (bouncing): Predict **"Gauge Variation"** (Uneven thickness).
+    * IF \`Die Temp\` is too low: Predict **"Melt Fracture/Sharkskin"**.
+* **OUTPUT METRICS:** Dart Drop Impact, Elmendorf Tear (MD/TD), Haze/Gloss.
+
+#### 4. POLYMER FOAMING (Supercritical)
+* **Context:** Shoe soles, Insulation.
+* **REQUIRED KNOBS (Inputs):**
+    * \`Saturation Pressure\` (MPa): Gas loading ($CO_2/N_2$).
+    * \`Depressurization Rate\` (dP/dt): Nucleation trigger.
+    * \`Soaking Temp\` (°C).
+* **ENGINEERING LOGIC:**
+    * IF \`dP/dt\` is SLOW: Low cell density, large bubbles (Poor insulation).
+    * IF \`Soaking Temp\` > \`Tg\` + 50°C: Foam collapse (Coalescence).
+* **OUTPUT METRICS:** Cell Density (cells/cm³), Void Fraction (%), Compression Set.
+
+#### 5. BIO-ASSEMBLY (Mycelium)
+* **Context:** Packaging, Structural bio-materials.
+* **REQUIRED KNOBS (Inputs):**
+    * \`Substrate C:N Ratio\`: (e.g., 30:1).
+    * \`Inoculation Rate\` (wt%).
+    * \`Growth Environment\`: Temp (°C), RH (%), $CO_2$ (ppm).
+    * \`Baking Temp\` (Inactivation).
+* **ENGINEERING LOGIC:**
+    * IF \`$CO_2\` > 5000ppm: Predict **"Stifled Growth"** (Need more Air Exchange).
+    * IF \`RH\` < 85%: Predict **"Desiccation/Premature Dormancy"**.
+* **OUTPUT METRICS:** Compressive Modulus, Water Uptake, Density.
+
+#### 6. 📰 LATEST INTELLIGENCE FEED
+* **Trigger:** When asked for "Research", "News", "Updates", or "Intel".
+* **Source:** Use Google Search Grounding.
+* **Format:** List top 5 relevant articles with Title, Source, Date, and a 1-sentence technical summary.
 `;
 
-const THINKING_CONFIG = {
-  thinkingBudget: 32768
-};
+const VISUALIZATION_SYSTEM_INSTRUCTION = `
+You are a 3D Visualization Engine.
+Your goal is to generate Plotly.js JSON data for manufacturing simulations.
 
-// Helper to strip markdown and formatting artifacts
-const cleanText = (text: string): string => {
-  if (!text) return "";
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '$1')   // Remove bold
-    .replace(/__(.*?)__/g, '$1')       // Remove italics
-    .replace(/###\s?/g, '')            // Remove h3
-    .replace(/##\s?/g, '')             // Remove h2
-    .replace(/#\s?/g, '')              // Remove h1
-    .replace(/^\s*[\*]\s/gm, '• ')     // Replace asterisk bullets with dots
-    .replace(/^\s*-\s/gm, '• ')        // Replace dash bullets with dots
-    .replace(/`/g, '')                 // Remove code ticks
-    .trim();
-};
+CRITICAL CONSTRAINTS:
+1. OUTPUT JSON ONLY. No markdown, no explanations outside the JSON object.
+2. LOW RESOLUTION: Max 10x10 grids for surfaces. Max 20 points for scatters.
+3. ROUND NUMBERS: 2 decimal places max.
 
-// Chat Instance
-let chatSession: Chat | null = null;
-
-export const getChatResponse = async (message: string): Promise<string> => {
-  try {
-    if (!chatSession) {
-      chatSession = ai.chats.create({
-        model: 'gemini-3-pro-preview',
-        config: {
-          systemInstruction: SYSTEM_INSTRUCTION,
-          thinkingConfig: THINKING_CONFIG
-        }
-      });
+REQUIRED JSON STRUCTURE:
+{
+  "data": [
+    {
+      "type": "surface",
+      "z": [[1, 2], [3, 4]],
+      "colorscale": "Viridis",
+      "name": "Process Geometry"
     }
+  ],
+  "layout": {
+    "title": { "text": "Simulation Title", "font": { "color": "#fff" } },
+    "paper_bgcolor": "rgba(0,0,0,0)",
+    "plot_bgcolor": "rgba(0,0,0,0)",
+    "scene": {
+       "xaxis": { "title": "X", "color": "#fff" },
+       "yaxis": { "title": "Y", "color": "#fff" },
+       "zaxis": { "title": "Z", "color": "#fff" }
+    }
+  },
+  "explanation": "Short 1-sentence engineering summary."
+}
+`;
 
-    const result = await chatSession.sendMessage({ message });
-    return cleanText(result.text || "System error: No response generated.");
+const MODEL_NAME = 'gemini-2.5-flash';
+
+// Helper to clean Markdown JSON blocks
+function cleanJsonText(text: string): string {
+  if (!text) return '{}';
+  let clean = text.trim();
+  if (clean.startsWith('```json')) {
+    clean = clean.replace(/^```json/, '').replace(/```$/, '');
+  } else if (clean.startsWith('```')) {
+    clean = clean.replace(/^```/, '').replace(/```$/, '');
+  }
+  return clean.trim();
+}
+
+// --- SERVICE FUNCTIONS ---
+
+export async function getChatResponse(message: string): Promise<string> {
+  try {
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: message,
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+      }
+    });
+    return response.text || "I couldn't generate a response.";
   } catch (error) {
     console.error("Chat Error:", error);
-    return "Error communicating with the Material Strategy Engine.";
+    return "System Error: Unable to process request.";
   }
-};
+}
 
-export const askQuadrantQuestion = async (quadrant: string, topic: string): Promise<string> => {
+export async function analyzeMaterial(materialName: string): Promise<AnalysisResult> {
+  const prompt = `Analyze the material "${materialName}" for a material science dashboard.
+  Return a JSON object with:
+  - quadrant: "BIO_BIO", "BIO_DURABLE", "FOSSIL_BIO", or "NEXT_GEN"
+  - summary: A technical executive summary (2 sentences).
+  - engineeringLogic: { compounding: string, processing: string, system: string } (Technical details)
+  - constraints: string[] (List of 3-5 critical manufacturing risks)
+  
+  Do not return markdown formatting, just the raw JSON string.`;
+
   try {
-    const prompt = `
-      Context: The user is analyzing the ${quadrant} material quadrant.
-      Task: Provide a technical answer regarding: "${topic}".
-      
-      Keep it concise, data-driven, and focus on market realities for 2024-2025.
-      Use plain text only, no markdown.
-    `;
-
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: MODEL_NAME,
       contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        thinkingConfig: THINKING_CONFIG
-      }
-    });
-
-    return cleanText(response.text || "No analysis generated.");
-  } catch (error) {
-    console.error("Quadrant Chat Error:", error);
-    return "Service unavailable.";
-  }
-};
-
-export const discoverEmergingPolymers = async (quadrant: string): Promise<MaterialFamily[]> => {
-  try {
-    const prompt = `
-      Identify 3 emerging or novel polymer classes or specific high-performance grades within the "${quadrant}" material sector that are gaining traction in 2024-2025.
-      Focus on materials that are cutting-edge or recently commercialized.
-      Include "readiness" (0-100 score of commercial readiness) and "innovators" (array of company names).
-      
-      Return ONLY a valid JSON array with this structure:
-      [
-        {
-          "name": "Name of Material/Class",
-          "description": "Brief technical description of what it is and why it is important.",
-          "commonGrades": ["Example Grade 1", "Example Grade 2"],
-          "readiness": 85,
-          "innovators": ["Company A", "Company B"]
-        }
-      ]
-      
-      Do not include markdown formatting.
-    `;
-    
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
+      config: { 
         responseMimeType: 'application/json',
-        thinkingConfig: THINKING_CONFIG
+        systemInstruction: SYSTEM_INSTRUCTION
       }
     });
-
-    const text = response.text || '[]';
-    let raw: MaterialFamily[] = [];
-    try {
-        raw = JSON.parse(text);
-    } catch (e) {
-        const match = text.match(/\[[\s\S]*\]/);
-        if (match) raw = JSON.parse(match[0]);
-    }
     
-    return Array.isArray(raw) ? raw.map(r => ({
-        ...r,
-        description: cleanText(r.description)
-    })) : [];
-  } catch (error) {
-    console.error("Discovery Error:", error);
-    return [];
-  }
-};
-
-export const findManufacturers = async (process: string, material: string): Promise<Manufacturer[]> => {
-  try {
-    const prompt = `
-      Find real-world companies that manufacture products using ${process} with ${material} (or similar sustainable materials).
-      Focus on 2024-2025 active companies and specific consumer products available on the market.
-      
-      Return a JSON array of objects:
-      [
-        {
-          "name": "Company Name",
-          "product": "Specific product example",
-          "location": "City/Country",
-          "description": "Brief description of the product and market fit.",
-          "website": "Website URL"
-        }
-      ]
-      
-      Use Google Search to find real data.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-        systemInstruction: SYSTEM_INSTRUCTION,
-      }
-    });
-
-    let text = response.text || '[]';
-    
-    // Cleanup potential markdown
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-    // Robust extraction of JSON array
-    const startIndex = text.indexOf('[');
-    const endIndex = text.lastIndexOf(']');
-
-    if (startIndex !== -1 && endIndex !== -1) {
-      text = text.substring(startIndex, endIndex + 1);
-      const results = JSON.parse(text) as Manufacturer[];
-      return results.map(r => ({
-        ...r,
-        description: cleanText(r.description)
-      }));
-    }
-    
-    return [];
-  } catch (error) {
-    console.error("Manufacturer Discovery Error:", error);
-    return [];
-  }
-};
-
-
-export const analyzeMaterial = async (input: string): Promise<AnalysisResult> => {
-  try {
-    const prompt = `
-      Analyze the following material/product request: "${input}".
-      
-      Provide a structured JSON response with the following fields:
-      - quadrant: One of "BIO_BIO", "BIO_DURABLE", "FOSSIL_BIO", "NEXT_GEN".
-      - summary: A brief technical summary (plain text, no markdown).
-      - engineeringLogic: An object with keys "compounding", "processing", "system" containing specific logic (plain text).
-      - constraints: An array of strings listing key constraints (plain text).
-      
-      Do not include markdown formatting in the response, just raw JSON.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        thinkingConfig: THINKING_CONFIG
-      }
-    });
-
-    const text = response.text || '{}';
-    let rawResult: any = {};
-    try {
-        rawResult = JSON.parse(text);
-    } catch (e) {
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) rawResult = JSON.parse(match[0]);
-    }
-
-    const safeLogic = rawResult.engineeringLogic || {};
-
-    return {
-      quadrant: rawResult.quadrant || 'NEXT_GEN',
-      summary: cleanText(rawResult.summary || 'No summary available.'),
-      engineeringLogic: {
-        compounding: cleanText(safeLogic.compounding || 'Analysis unavailable.'),
-        processing: cleanText(safeLogic.processing || 'Analysis unavailable.'),
-        system: cleanText(safeLogic.system || 'Analysis unavailable.'),
-      },
-      constraints: Array.isArray(rawResult.constraints) ? rawResult.constraints.map(cleanText) : []
-    };
-
+    return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("Analysis Error:", error);
-    throw new Error("Failed to analyze material.");
+    throw error;
   }
-};
+}
 
-export const generateMaterialRecipe = async (problemStatement: string): Promise<MaterialRecipe> => {
+export async function generateMaterialImage(prompt: string): Promise<string> {
   try {
-    const prompt = `
-      Act as a Chief Technology Officer in Material Science.
-      Invent a novel sustainable material solution for this problem: "${problemStatement}".
-      
-      Generate a commercial "Material Profile".
-      
-      Return ONLY valid JSON matching this structure:
-      {
-        "name": "Trade Name",
-        "quadrant": "BIO_BIO" | "BIO_DURABLE" | "FOSSIL_BIO" | "NEXT_GEN",
-        "description": "Technical description of the composite.",
-        "ingredients": [ {"name": "Ingredient", "percentage": "XX%", "function": "Why it is here"} ],
-        "properties": [ {"name": "Property", "value": "Value"} ],
-        "sustainabilityScore": 85,
-        "applications": ["App 1", "App 2", "App 3"]
-      }
-    `;
-
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        thinkingConfig: THINKING_CONFIG
-      }
+      model: 'gemini-2.5-flash-image',
+      contents: `Generate a photorealistic material close-up: ${prompt}. Cinematic lighting, macro photography style.`,
     });
-
-    const text = response.text || '{}';
-    let rawResult: any = {};
-    try {
-        rawResult = JSON.parse(text);
-    } catch(e) {
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) rawResult = JSON.parse(match[0]);
-    }
     
-    return {
-      ...rawResult,
-      name: rawResult.name || 'Unnamed Material',
-      quadrant: rawResult.quadrant || 'NEXT_GEN',
-      description: cleanText(rawResult.description || ''),
-      ingredients: Array.isArray(rawResult.ingredients) ? rawResult.ingredients.map((i: any) => ({ ...i, function: cleanText(i.function) })) : [],
-      properties: Array.isArray(rawResult.properties) ? rawResult.properties : [],
-      sustainabilityScore: rawResult.sustainabilityScore || 0,
-      applications: Array.isArray(rawResult.applications) ? rawResult.applications : [],
-    };
-  } catch (error) {
-    console.error("Recipe Generation Error:", error);
-    throw new Error("Failed to generate recipe.");
-  }
-};
-
-// NEW: Extract Recipe from Patent PDF
-export const extractRecipeFromPatent = async (base64Pdf: string): Promise<MaterialRecipe> => {
-  try {
-    const prompt = `
-      Act as an expert formulation chemist. Analyze the attached patent PDF.
-      
-      Task 1: Reverse Engineer the "Best Mode" or "Preferred Embodiment" formulation. Extract the exact ingredients and percentages (or ranges).
-      Task 2: Extract the "Cooking Instructions" (Processing Logic). Look for temperatures, mixing speeds, screw configurations, or reaction times.
-      Task 3: Act as a creative Chef. Suggest 3 "Variations" based on similar patents or adjacent research that could improve this formulation for modern applications.
-
-      Return ONLY valid JSON matching this structure:
-      {
-        "name": "Extracted Trade Name or Title",
-        "quadrant": "BIO_BIO" | "BIO_DURABLE" | "FOSSIL_BIO" | "NEXT_GEN",
-        "description": "Technical summary of the invention.",
-        "ingredients": [ {"name": "Ingredient", "percentage": "XX%", "function": "Role in formula"} ],
-        "properties": [ {"name": "Property", "value": "Value"} ],
-        "sustainabilityScore": 0, // Estimate 0-100 based on ingredients
-        "applications": ["App 1", "App 2"],
-        "processingSteps": ["Step 1: Dry material at X temp", "Step 2: Extrude at Y RPM"],
-        "variations": [ {"name": "Variation Name", "description": "How to modify it and why (e.g. Add 5% Talc for stiffness)"} ]
-      }
-    `;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: 'application/pdf',
-              data: base64Pdf
+    if (response.candidates?.[0]?.content?.parts) {
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
             }
-          },
-          { text: prompt }
-        ]
-      },
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        thinkingConfig: THINKING_CONFIG
-      }
-    });
-
-    const text = response.text || '{}';
-    let rawResult: any = {};
-    try {
-        rawResult = JSON.parse(text);
-    } catch(e) {
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) rawResult = JSON.parse(match[0]);
+        }
     }
-
-    return {
-      ...rawResult,
-      name: rawResult.name || 'Patent Formulation',
-      quadrant: rawResult.quadrant || 'NEXT_GEN',
-      description: cleanText(rawResult.description || ''),
-      ingredients: Array.isArray(rawResult.ingredients) ? rawResult.ingredients.map((i: any) => ({ ...i, function: cleanText(i.function) })) : [],
-      properties: Array.isArray(rawResult.properties) ? rawResult.properties : [],
-      sustainabilityScore: rawResult.sustainabilityScore || 50,
-      applications: Array.isArray(rawResult.applications) ? rawResult.applications : [],
-      processingSteps: Array.isArray(rawResult.processingSteps) ? rawResult.processingSteps.map(cleanText) : [],
-      variations: Array.isArray(rawResult.variations) ? rawResult.variations.map((v: any) => ({ name: cleanText(v.name), description: cleanText(v.description) })) : [],
-    };
-
-  } catch (error) {
-    console.error("Patent Extraction Error:", error);
-    throw new Error("Failed to extract recipe from patent.");
-  }
-};
-
-export const generateMaterialImage = async (description: string): Promise<string> => {
-  try {
-    const response = await ai.models.generateImages({
-      model: 'imagen-4.0-generate-001',
-      prompt: `Photorealistic product design render of: ${description}. Focus on showing accurate material texture, surface finish, and physical form factor. Cinematic studio lighting, macro details, 8k resolution, raw material aesthetics.`,
-      config: {
-        numberOfImages: 1,
-        outputMimeType: 'image/jpeg',
-        aspectRatio: '4:3',
-      },
-    });
-
-    const base64ImageBytes = response.generatedImages?.[0]?.image?.imageBytes;
-    if (base64ImageBytes) {
-      return `data:image/jpeg;base64,${base64ImageBytes}`;
-    }
-    return '';
+    return ''; 
   } catch (error) {
     console.error("Image Gen Error:", error);
     return '';
   }
-};
+}
 
-export const searchMarketIntel = async (query: string): Promise<NewsItem[]> => {
+export async function searchMarketIntel(query: string): Promise<NewsItem[]> {
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Find the latest technical news, patents, or market updates regarding: "${query}". Return a summary of the top 3-5 findings. Focus on 2024-2025 data.`,
-      config: {
-        tools: [{ googleSearch: {} }],
-        systemInstruction: "You are a market intelligence researcher. Extract URLs and sources explicitly.",
-      }
+        model: MODEL_NAME,
+        contents: `Find the latest technical news and market updates regarding: ${query}. Return a JSON array of 5 items with { title, url, snippet, source }. ensure the response is strictly valid JSON format.`,
+        config: {
+            tools: [{ googleSearch: {} }],
+        }
     });
 
-    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    const items: NewsItem[] = [];
-
-    chunks.forEach((chunk: any) => {
-      if (chunk.web) {
-        items.push({
-          title: chunk.web.title || 'Unknown Source',
-          url: chunk.web.uri || '#',
-          snippet: 'Web Source',
-          source: 'Google Search'
-        });
-      }
-    });
+    const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    let text = cleanJsonText(response.text || '[]');
     
-    if (items.length === 0 && response.text) {
-         items.push({
-             title: "Generated Summary",
-             url: "#",
-             snippet: cleanText(response.text.substring(0, 200) + "..."),
-             source: "Gemini Analysis"
-         });
+    try {
+        return JSON.parse(text);
+    } catch {
+        if (chunks) {
+            return chunks.map((c: any) => ({
+                title: c.web?.title || "Update",
+                url: c.web?.uri || "#",
+                snippet: "Source from Google Search",
+                source: "Web"
+            }));
+        }
+        return [];
     }
-
-    return items;
   } catch (error) {
     console.error("Search Error:", error);
     return [];
   }
-};
+}
 
-export const getDailyIntelBriefing = async (): Promise<IntelBriefing> => {
-    try {
-        const prompt = `
-          Act as an Editor-in-Chief for a Material Science publication.
-          Perform a broad search for the latest news in "Biomaterials", "Sustainable Polymers", "Bio-startups", and "Material Science Research" from the last 7 days (or recent 2024-2025 news).
+export async function getDailyIntelBriefing(): Promise<IntelBriefing> {
+  const query = "Latest executive news in Bioplastics, PFAS regulations, and Polymer Science 2024-2025";
+  try {
+      const response = await ai.models.generateContent({
+          model: MODEL_NAME,
+          contents: `Generate a daily intelligence briefing based on: ${query}. 
+          Return a JSON object with:
+          - date: string (Today's date)
+          - summary: string (Executive summary)
+          - commercialMoves: NewsItem[] (Business/M&A)
+          - researchBreakthroughs: NewsItem[] (Science/Tech)
+          - policyUpdates: NewsItem[] (Gov/Legal)
           
-          Synthesize the findings into a structured "Daily Briefing".
-          Categorize the news into three specific arrays:
-          1. commercialMoves: Funding, M&A, startups, product launches.
-          2. researchBreakthroughs: Academic papers, university discoveries, new technologies.
-          3. policyUpdates: Regulations, bans, government grants (EU/US/Asia).
-          
-          Return valid JSON:
-          {
-             "date": "Today's Date",
-             "summary": "A 1-sentence executive summary of the day's vibe.",
-             "commercialMoves": [ {"title": "...", "snippet": "...", "source": "...", "url": "..."} ],
-             "researchBreakthroughs": [ {"title": "...", "snippet": "...", "source": "...", "url": "..."} ],
-             "policyUpdates": [ {"title": "...", "snippet": "...", "source": "...", "url": "..."} ]
+          NewsItem structure: { title, url, snippet, source }
+          Ensure the response is strict JSON without markdown formatting.`,
+          config: {
+              tools: [{ googleSearch: {} }],
           }
-        `;
+      });
+      
+      const text = cleanJsonText(response.text || '{}');
+      return JSON.parse(text);
+  } catch (error) {
+      console.error(error);
+      return { date: new Date().toDateString(), summary: "Failed to load intel.", commercialMoves: [], researchBreakthroughs: [], policyUpdates: []};
+  }
+}
 
+export async function askQuadrantQuestion(quadrantTitle: string, question: string): Promise<string> {
+    return getChatResponse(`[Context: ${quadrantTitle} Sector] ${question}`);
+}
+
+export async function discoverEmergingPolymers(quadrantTitle: string): Promise<MaterialFamily[]> {
+    const prompt = `Identify 3 emerging, cutting-edge material families in the ${quadrantTitle} sector that are not yet mainstream. 
+    Return JSON: [{ name, description, commonGrades: string[], readiness: number (0-100), innovators: string[] }]`;
+    
+    try {
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: MODEL_NAME,
             contents: prompt,
-            config: {
+            config: { responseMimeType: 'application/json' }
+        });
+        return JSON.parse(response.text || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+export async function findManufacturers(process: string, material: string): Promise<Manufacturer[]> {
+    const prompt = `Find top 4 global manufacturers or suppliers who specialize in ${process} of ${material}.
+    Return JSON: [{ name, product, location, description, website }]. Ensure strict JSON format.`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: prompt,
+            config: { 
                 tools: [{ googleSearch: {} }],
-                systemInstruction: SYSTEM_INSTRUCTION,
-                responseMimeType: 'application/json',
-                thinkingConfig: THINKING_CONFIG
             }
         });
-
-        const text = response.text || '{}';
-        let raw: any = {};
-        try {
-            raw = JSON.parse(text);
-        } catch (e) {
-            const match = text.match(/\{[\s\S]*\}/);
-            if (match) raw = JSON.parse(match[0]);
-        }
-
-        // Helper to map and clean
-        const mapItems = (arr: any[]) => Array.isArray(arr) ? arr.map(i => ({
-            title: cleanText(i.title || 'Untitled'),
-            snippet: cleanText(i.snippet || ''),
-            source: cleanText(i.source || 'Web'),
-            url: i.url || '#'
-        })) : [];
-
-        // Extract grounding links if JSON urls are empty (fallback)
-        // Note: With responseMimeType=JSON and googleSearch, Gemini 3 Pro usually populates the fields correctly from the tool usage.
-        
-        return {
-            date: raw.date || new Date().toLocaleDateString(),
-            summary: cleanText(raw.summary || 'Daily briefing ready.'),
-            commercialMoves: mapItems(raw.commercialMoves),
-            researchBreakthroughs: mapItems(raw.researchBreakthroughs),
-            policyUpdates: mapItems(raw.policyUpdates)
-        };
-
-    } catch (error) {
-        console.error("Briefing Error:", error);
-        throw new Error("Failed to generate briefing.");
-    }
-};
-
-export const searchPatents = async (company: string): Promise<Patent[]> => {
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `Find recent patents assigned to "${company}". List the top 3-5 most relevant patents.
-      
-      Return ONLY a valid JSON array of objects. 
-      JSON Format: [{"title": "...", "number": "...", "assignee": "...", "snippet": "...", "url": "..."}]
-      
-      Do not use numbered lists. Do not include markdown formatting.`,
-      config: {
-        tools: [{ googleSearch: {} }],
-      }
-    });
-
-    let text = response.text || '[]';
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-    const startIndex = text.indexOf('[');
-    const endIndex = text.lastIndexOf(']');
-
-    if (startIndex !== -1 && endIndex !== -1) {
-      text = text.substring(startIndex, endIndex + 1);
-      const patents = JSON.parse(text) as Patent[];
-      return patents.map(p => ({
-        ...p,
-        title: cleanText(p.title),
-        snippet: cleanText(p.snippet)
-      }));
-    }
-    
-    return [];
-  } catch (error) {
-    console.error("Patent Search Error:", error);
-    return [];
-  }
-};
-
-export const analyzePatentPdf = async (base64Pdf: string): Promise<AnalysisResult> => {
-  try {
-    const prompt = `
-      Analyze this patent document.
-      Deconstruct the invention using the "3 Pillar Strategy":
-      1. Advanced Compounding
-      2. Application Engineering
-      3. System Intelligence
-      
-      Also classify it into one of the 4 Quadrants.
-      
-      Return a valid JSON response matching this structure:
-      {
-        "quadrant": "BIO_BIO",
-        "summary": "Brief summary string",
-        "engineeringLogic": {
-            "compounding": "String details",
-            "processing": "String details",
-            "system": "String details"
-        },
-        "constraints": ["Constraint 1", "Constraint 2"]
-      }
-      Use plain text for all string fields.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: 'application/pdf',
-              data: base64Pdf
-            }
-          },
-          { text: prompt }
-        ]
-      },
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        thinkingConfig: THINKING_CONFIG
-      }
-    });
-
-    const text = response.text || '{}';
-    let rawResult: any = {};
-    try {
-        rawResult = JSON.parse(text);
+        const text = cleanJsonText(response.text || '[]');
+        return JSON.parse(text);
     } catch (e) {
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) rawResult = JSON.parse(match[0]);
+        return [];
     }
+}
 
-    const safeLogic = rawResult.engineeringLogic || {};
+export async function generateMaterialRecipe(problemStatement: string): Promise<MaterialRecipe> {
+    const prompt = `Generate a detailed material formulation recipe to solve this problem: "${problemStatement}".
+    Return JSON object: {
+        name: string,
+        quadrant: "BIO_BIO" | "BIO_DURABLE" | "FOSSIL_BIO" | "NEXT_GEN",
+        description: string,
+        ingredients: [{ name, percentage, function }],
+        properties: [{ name, value }],
+        sustainabilityScore: number (0-100),
+        applications: string[],
+        processingSteps: string[] (Detailed manufacturing steps),
+        variations: [{ name, description }] (Alternative formulation options)
+    }`;
 
-    return {
-        quadrant: rawResult.quadrant || 'NEXT_GEN',
-        summary: cleanText(rawResult.summary || 'No summary available.'),
-        engineeringLogic: {
-            compounding: cleanText(safeLogic.compounding || 'Details not extracted.'),
-            processing: cleanText(safeLogic.processing || 'Details not extracted.'),
-            system: cleanText(safeLogic.system || 'Details not extracted.'),
-        },
-        constraints: Array.isArray(rawResult.constraints) ? rawResult.constraints.map(cleanText) : []
-    };
+    try {
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: prompt,
+            config: { 
+                systemInstruction: SYSTEM_INSTRUCTION,
+                responseMimeType: 'application/json' 
+            }
+        });
+        return JSON.parse(response.text || '{}');
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
+}
 
-  } catch (error) {
-    console.error("PDF Analysis Error:", error);
-    throw new Error("Failed to analyze PDF.");
-  }
-};
+export async function extractRecipeFromPatent(base64Pdf: string): Promise<MaterialRecipe> {
+    const prompt = `Analyze this patent PDF. Extract the "Best Mode" formulation or the primary invention recipe.
+    Return JSON object: {
+        name: string (Patent Title/ID),
+        quadrant: "NEXT_GEN",
+        description: string (Abstract summary),
+        ingredients: [{ name, percentage, function }],
+        properties: [{ name, value }] (Claims data),
+        sustainabilityScore: number (Estimate 0-100),
+        applications: string[],
+        processingSteps: string[] (Method of manufacture),
+        variations: [{ name, description }] (Embodiments)
+    }`;
 
-export const chatWithPatentContext = async (message: string, base64Pdf: string, history: any[]): Promise<string> => {
-  try {
-    const chat = ai.chats.create({
-      model: 'gemini-3-pro-preview',
-      history: [
-        {
-          role: 'user',
-          parts: [
-             { inlineData: { mimeType: 'application/pdf', data: base64Pdf } },
-             { text: "You are an expert patent analyst. Use this PDF to answer questions. Use plain text only." }
-          ]
-        },
-        {
-           role: 'model',
-           parts: [{ text: "Understood. I have analyzed the patent PDF. What would you like to know?" }]
-        },
-        ...history
-      ],
-      config: {
-        thinkingConfig: THINKING_CONFIG
-      }
-    });
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+                { inlineData: { mimeType: 'application/pdf', data: base64Pdf } },
+                { text: prompt }
+            ],
+            config: { responseMimeType: 'application/json' }
+        });
+        return JSON.parse(response.text || '{}');
+    } catch (e) {
+        console.error(e);
+        throw e;
+    }
+}
 
-    const result = await chat.sendMessage({ message });
-    return cleanText(result.text || "No response.");
-  } catch (error) {
-    console.error("Patent Chat Error:", error);
-    return "Error analyzing patent context.";
-  }
-};
+export async function searchPatents(query: string): Promise<Patent[]> {
+    const prompt = `Search for recent patents related to: ${query}. 
+    Return JSON array: [{ title, number, assignee, snippet, url }]. Ensure strict JSON output.`;
+    
+    try {
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: prompt,
+            config: { 
+                tools: [{ googleSearch: {} }],
+            }
+        });
+        const text = cleanJsonText(response.text || '[]');
+        return JSON.parse(text);
+    } catch (e) {
+        return [];
+    }
+}
+
+export async function analyzePatentPdf(base64Pdf: string): Promise<AnalysisResult> {
+    const prompt = `Analyze this patent document. Deconstruct the invention strategy.
+    Return JSON: AnalysisResult structure (quadrant, summary, engineeringLogic, constraints)`;
+    
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+                { inlineData: { mimeType: 'application/pdf', data: base64Pdf } },
+                { text: prompt }
+            ],
+            config: { responseMimeType: 'application/json' }
+        });
+        return JSON.parse(response.text || '{}');
+    } catch (e) {
+        throw e;
+    }
+}
+
+export async function chatWithPatentContext(message: string, base64Pdf: string, history: ChatMessage[]): Promise<string> {
+    const context = history.map(m => `${m.role}: ${m.content}`).join('\n');
+    const prompt = `Context: ${context}\nUser Question: ${message}\nAnswer based on the attached patent PDF.`;
+    
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: [
+                { inlineData: { mimeType: 'application/pdf', data: base64Pdf } },
+                { text: prompt }
+            ]
+        });
+        return response.text || "No response generated.";
+    } catch (e) {
+        return "Error analyzing document.";
+    }
+}
+
+// NEW: 3D Visualization Generator
+export async function generateMachineSimulation(processName: string, parameters: Record<string, number>): Promise<VisualizationData> {
+    const prompt = `Generate a 3D visualization for "${processName}" with parameters: ${JSON.stringify(parameters)}.
+    
+    IMPORTANT TO PREVENT ERRORS:
+    - Use VERY LOW RESOLUTION grids (e.g. 10x10).
+    - Round all numbers to 2 decimal places.
+    - Keep JSON size small.
+    
+    STRICTLY return a JSON object with two keys:
+    1. 'data': Array of Plotly trace objects (surface, mesh3d, scatter3d).
+    2. 'layout': Plotly layout object (dark transparent bg).
+    3. 'explanation': 1 sentence summary.
+
+    DO NOT return Python code. Return raw JSON data.`;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: prompt,
+            config: { 
+                responseMimeType: 'application/json',
+                systemInstruction: VISUALIZATION_SYSTEM_INSTRUCTION, // Use the lightweight instruction
+                maxOutputTokens: 8192 
+            }
+        });
+        
+        let text = response.text || '{}';
+        const result = JSON.parse(text);
+        
+        // Safety check for valid plotly structure
+        if (!result.data || !Array.isArray(result.data)) {
+             // Fallback if data is missing but layout exists (rare, but avoids crash)
+             if (result.layout) {
+                 result.data = [];
+                 result.explanation = result.explanation || "No visual data generated.";
+             } else {
+                 throw new Error("Invalid visualization format");
+             }
+        }
+        
+        return result;
+    } catch (error) {
+        console.error("3D Sim Error:", error);
+        // Fallback to prevent crash
+        return {
+            data: [],
+            layout: { 
+                title: { text: "Simulation Data Error - Try simplifying parameters" },
+                paper_bgcolor: 'rgba(0,0,0,0)', 
+                plot_bgcolor: 'rgba(0,0,0,0)'
+            },
+            explanation: "The AI generated data was too complex to parse. Please try again."
+        };
+    }
+}

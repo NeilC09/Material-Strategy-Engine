@@ -1,8 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
-import { Factory as FactoryIcon, Settings, ArrowLeft, Box, Wind, Layers, Droplet, Cog, Cpu, Thermometer, Search, ShoppingBag, Globe, Loader2, ExternalLink, Activity, Play, Pause, CheckCircle2, XCircle, Zap, RotateCcw } from 'lucide-react';
-import { ManufacturingProcess, Manufacturer, SharedContext } from '../types';
-import { findManufacturers } from '../services/geminiService';
+import React, { useState, useEffect, useRef } from 'react';
+import { Factory as FactoryIcon, Settings, ArrowLeft, Box, Wind, Layers, Droplet, Cog, Cpu, Thermometer, Search, ShoppingBag, Globe, Loader2, ExternalLink, Activity, Play, Pause, CheckCircle2, XCircle, Zap, RotateCcw, Monitor } from 'lucide-react';
+import { ManufacturingProcess, Manufacturer, SharedContext, VisualizationData } from '../types';
+import { findManufacturers, generateMachineSimulation } from '../services/geminiService';
+
+declare global {
+  interface Window {
+    Plotly: any;
+  }
+}
 
 interface FactoryProps {
   initialMaterial?: string;
@@ -111,12 +117,6 @@ const parseRange = (valStr: string): number => {
     return parts[0];
 };
 
-interface SimulationResult {
-    qualityScore: number;
-    activeDefects: string[];
-    propertyImpacts: { name: string; change: string; good: boolean }[];
-}
-
 const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constraints = [] }) => {
   const [selectedProcess, setSelectedProcess] = useState<ManufacturingProcess | null>(null);
   const [materialContext, setMaterialContext] = useState(initialMaterial || 'Bio-Material');
@@ -126,8 +126,11 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
   const [activeTab, setActiveTab] = useState<'simulate' | 'market'>('simulate');
   
   const [userParams, setUserParams] = useState<Record<string, number>>({});
-  const [simulationResult, setSimulationResult] = useState<SimulationResult>({ qualityScore: 100, activeDefects: [], propertyImpacts: [] });
-  const [isPlaying, setIsPlaying] = useState(true);
+  
+  // 3D Visualization State
+  const [vizData, setVizData] = useState<VisualizationData | null>(null);
+  const [vizLoading, setVizLoading] = useState(false);
+  const plotRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (initialMaterial) setMaterialContext(initialMaterial);
@@ -136,6 +139,7 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
   useEffect(() => {
     setManufacturers([]);
     setHasSearched(false);
+    setVizData(null); // Reset viz on new process
     if (selectedProcess && selectedProcess.parameters) {
         const initialParams: Record<string, number> = {};
         selectedProcess.parameters.forEach(p => {
@@ -145,46 +149,39 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
     }
   }, [selectedProcess]);
 
+  // Handle 3D Plot Rendering
   useEffect(() => {
-      if (!selectedProcess || !isPlaying) return;
-
-      const runPhysics = () => {
-          let totalScore = 100;
-          let defects: string[] = [];
-          let impacts: { name: string; change: string; good: boolean }[] = [];
-
-          selectedProcess.parameters?.forEach(param => {
-             const userVal = userParams[param.name] || 0;
-             const targetVal = parseRange(param.bioVal);
-             const diff = userVal - targetVal;
-             const percentDiff = (diff / targetVal) * 100;
-
-             if (param.name.includes('Temp')) {
-                 if (percentDiff > 10) {
-                     totalScore -= 20;
-                     defects.push('Thermal Degradation');
-                     impacts.push({ name: 'Molecular Weight', change: 'Decreased', good: false });
-                 } else if (percentDiff < -10) {
-                     totalScore -= 15;
-                     defects.push('Short Shot');
-                 }
-             }
-             // Simplified logic for demo...
-             if (Math.abs(percentDiff) > 20) totalScore -= 5;
-          });
+      if (vizData && plotRef.current && window.Plotly) {
+          const config = { responsive: true, displayModeBar: false };
+          const layout = {
+              ...vizData.layout,
+              autosize: true,
+              margin: { l: 0, r: 0, b: 0, t: 0 },
+              paper_bgcolor: 'rgba(0,0,0,0)',
+              plot_bgcolor: 'rgba(0,0,0,0)',
+              scene: {
+                  ...vizData.layout.scene,
+                  xaxis: { ...vizData.layout.scene?.xaxis, showgrid: true, gridcolor: '#333' },
+                  yaxis: { ...vizData.layout.scene?.yaxis, showgrid: true, gridcolor: '#333' },
+                  zaxis: { ...vizData.layout.scene?.zaxis, showgrid: true, gridcolor: '#333' },
+              }
+          };
           
-          setSimulationResult({
-              qualityScore: Math.max(0, totalScore),
-              activeDefects: [...new Set(defects)],
-              propertyImpacts: impacts
-          });
-      };
+          window.Plotly.newPlot(plotRef.current, vizData.data, layout, config);
+      }
+  }, [vizData]);
 
-      const interval = setInterval(runPhysics, 500);
-      return () => clearInterval(interval);
-
-  }, [selectedProcess, userParams, isPlaying, constraints]);
-
+  const handleRunSimulation = async () => {
+      if (!selectedProcess) return;
+      setVizLoading(true);
+      try {
+          const data = await generateMachineSimulation(selectedProcess.name, userParams);
+          setVizData(data);
+      } catch (error) {
+          console.error("Simulation failed", error);
+      }
+      setVizLoading(false);
+  };
 
   const handleFindManufacturers = async () => {
     if (!selectedProcess) return;
@@ -206,6 +203,7 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
             initialParams[p.name] = parseRange(p.bioVal);
         });
         setUserParams(initialParams);
+        setVizData(null);
     }
   };
 
@@ -263,7 +261,7 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
                     onClick={() => setActiveTab('simulate')}
                     className={`px-6 py-2 text-xs font-bold font-mono uppercase tracking-wider border transition-all ${activeTab === 'simulate' ? 'bg-cyan-500 text-black border-cyan-500 shadow-neon' : 'text-gray-500 border-transparent hover:text-white'}`}
                  >
-                    Simulation
+                    3D Simulation
                  </button>
                  <button 
                     onClick={() => setActiveTab('market')}
@@ -281,7 +279,7 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
                   <div className="lg:col-span-4 bg-obsidian-800 border border-white/10 flex flex-col overflow-hidden">
                       <div className="p-5 border-b border-white/10 flex justify-between items-center bg-black/20">
                           <h3 className="font-bold text-gray-400 text-xs uppercase tracking-widest flex items-center gap-2 font-mono">
-                              <Settings size={14} /> Parameters
+                              <Settings size={14} /> Physics Engine
                           </h3>
                           <button onClick={resetParams} className="text-[10px] text-cyan-500 font-bold uppercase tracking-widest hover:text-cyan-400 flex items-center gap-1 font-mono">
                               <RotateCcw size={10} /> Reset
@@ -313,107 +311,60 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
                                               onChange={(e) => setUserParams(prev => ({...prev, [param.name]: parseFloat(e.target.value)}))}
                                               className="absolute z-20 w-full h-2 bg-white/10 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(34,211,238,0.8)]"
                                           />
-                                          {/* Optimal Indicator */}
                                           <div className="absolute h-4 w-0.5 bg-cyan-500 z-10 top-[-4px]" 
                                                style={{ left: `${((target - min) / (max - min)) * 100}%` }}
                                           />
                                       </div>
-                                      <div className="flex justify-between text-[10px] text-gray-600 mt-2 font-mono">
-                                          <span>{min.toFixed(0)}</span>
-                                          <span className="text-cyan-600">TARGET: {param.bioVal}</span>
-                                          <span>{max.toFixed(0)}</span>
-                                      </div>
                                   </div>
                               );
                           })}
+
+                          <button 
+                            onClick={handleRunSimulation}
+                            disabled={vizLoading}
+                            className="w-full py-4 bg-cyan-500 text-black font-bold text-xs uppercase tracking-widest hover:bg-cyan-400 transition-colors shadow-neon flex items-center justify-center gap-2 font-mono"
+                          >
+                             {vizLoading ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} />}
+                             GENERATE 3D MODEL
+                          </button>
                       </div>
                   </div>
 
-                  {/* RIGHT: Results */}
-                  <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
-                      
-                      {/* Top Row: Quality Monitor */}
-                      <div className="bg-obsidian-800 border border-white/10 p-8 relative overflow-hidden shrink-0">
-                          <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px] opacity-5"></div>
-                          
-                          <div className="relative z-10 flex items-center justify-between">
-                              <div className="flex items-center gap-12">
-                                  <div className="relative w-32 h-32 flex items-center justify-center">
-                                      <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                                          <path className="text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" />
-                                          <path 
-                                              className={`${simulationResult.qualityScore > 80 ? 'text-cyan-500' : 'text-red-500'} transition-all duration-500 ease-out`}
-                                              strokeDasharray={`${simulationResult.qualityScore}, 100`}
-                                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                                              fill="none" 
-                                              stroke="currentColor" 
-                                              strokeWidth="2" 
-                                          />
-                                      </svg>
-                                      <div className="absolute flex flex-col items-center">
-                                          <span className="text-3xl font-mono font-bold text-white">{simulationResult.qualityScore.toFixed(0)}%</span>
-                                      </div>
-                                  </div>
-                                  
-                                  <div>
-                                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest font-mono mb-2">Integrity Status</h3>
-                                      <div className="flex items-center gap-3 text-xs text-gray-300 font-mono mb-6">
-                                          <span className={`w-1.5 h-1.5 ${isPlaying ? 'bg-cyan-500 animate-pulse' : 'bg-red-500'}`}></span>
-                                          {isPlaying ? 'PHYSICS ENGINE ACTIVE' : 'SIMULATION PAUSED'}
-                                      </div>
-                                      <button 
-                                        onClick={() => setIsPlaying(!isPlaying)}
-                                        className="border border-white/20 hover:bg-white/10 text-white px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors font-mono"
-                                      >
-                                        {isPlaying ? <Pause size={12} /> : <Play size={12} />} {isPlaying ? 'PAUSE' : 'RESUME'}
-                                      </button>
-                                  </div>
-                              </div>
+                  {/* RIGHT: 3D Visualization Viewport */}
+                  <div className="lg:col-span-8 bg-black/40 border border-white/10 relative flex flex-col overflow-hidden">
+                      <div className="absolute top-4 left-4 z-10 flex items-center gap-2 px-3 py-1 bg-black/60 border border-white/10 rounded-full">
+                         <div className="w-2 h-2 bg-red-500 animate-pulse rounded-full"></div>
+                         <span className="text-[10px] text-gray-300 font-mono uppercase tracking-widest">Live Render</span>
+                      </div>
 
-                              <div className="w-64 border-l border-white/10 pl-8">
-                                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 font-mono">Detected Defects</h4>
-                                  <div className="space-y-2">
-                                      {simulationResult.activeDefects.length === 0 ? (
-                                          <div className="flex items-center gap-2 text-cyan-500 text-xs font-bold font-mono uppercase">
-                                              <CheckCircle2 size={14} /> NOMINAL
-                                          </div>
-                                      ) : (
-                                          simulationResult.activeDefects.map((def, i) => (
-                                              <div key={i} className="flex items-center gap-2 text-red-500 text-xs font-bold font-mono uppercase animate-pulse">
-                                                  <XCircle size={14} /> {def}
-                                              </div>
-                                          ))
-                                      )}
-                                  </div>
-                              </div>
+                      {vizLoading && (
+                          <div className="absolute inset-0 z-20 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
+                              <Loader2 className="animate-spin text-cyan-500 mb-4" size={48} />
+                              <div className="text-cyan-400 font-mono text-sm uppercase tracking-widest font-bold">Computing Geometry...</div>
+                              <div className="text-gray-500 text-xs mt-2 font-mono">SOLVING PHYSICS EQUATIONS</div>
                           </div>
-                      </div>
+                      )}
 
-                      {/* Bottom Row: Property Shifts */}
-                      <div className="flex-1 bg-white/5 border border-white/10 p-8 overflow-y-auto">
-                          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2 font-mono">
-                              <Activity size={14} /> Property Delta
-                          </h3>
-                          
-                          {simulationResult.propertyImpacts.length === 0 ? (
-                              <div className="text-gray-600 font-mono text-xs">NO_DEVIATION_DETECTED</div>
-                          ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {simulationResult.propertyImpacts.map((impact, i) => (
-                                      <div key={i} className={`p-4 border flex items-center justify-between ${impact.good ? 'bg-cyan-900/10 border-cyan-500/20' : 'bg-red-900/10 border-red-500/20'}`}>
-                                          <div>
-                                              <div className="text-[10px] font-bold uppercase text-gray-500 mb-1 font-mono">{impact.name}</div>
-                                              <div className={`font-bold font-mono text-sm ${impact.good ? 'text-cyan-400' : 'text-red-400'}`}>{impact.change}</div>
-                                          </div>
-                                      </div>
-                                  ))}
-                              </div>
-                          )}
-                      </div>
+                      {!vizData && !vizLoading && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
+                             <Monitor size={48} className="mb-4 opacity-20" />
+                             <p className="font-mono text-xs uppercase tracking-widest">Awaiting Simulation Data</p>
+                             <p className="text-[10px] mt-2">Configure parameters and click "Generate 3D Model"</p>
+                          </div>
+                      )}
+
+                      <div ref={plotRef} className="w-full h-full" />
+                      
+                      {vizData?.explanation && (
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/80 border-t border-white/10 p-4 backdrop-blur-md">
+                              <div className="text-cyan-400 text-xs font-bold uppercase mb-1 font-mono">Engineering Insight</div>
+                              <p className="text-gray-300 text-sm font-mono leading-relaxed">{vizData.explanation}</p>
+                          </div>
+                      )}
                   </div>
                </div>
            ) : (
-               /* MARKET TAB */
+               /* MARKET TAB (Unchanged) */
                <div className="flex-1 bg-obsidian-800 border border-white/10 p-8 flex flex-col">
                   <div className="flex items-center justify-between mb-8">
                         <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono flex items-center gap-2">
