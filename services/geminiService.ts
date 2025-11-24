@@ -105,13 +105,16 @@ export const discoverEmergingPolymers = async (quadrant: string): Promise<Materi
     const prompt = `
       Identify 3 emerging or novel polymer classes or specific high-performance grades within the "${quadrant}" material sector that are gaining traction in 2024-2025.
       Focus on materials that are cutting-edge or recently commercialized.
+      Include "readiness" (0-100 score of commercial readiness) and "innovators" (array of company names).
       
       Return ONLY a valid JSON array with this structure:
       [
         {
           "name": "Name of Material/Class",
           "description": "Brief technical description of what it is and why it is important.",
-          "commonGrades": ["Example Grade 1", "Example Grade 2"]
+          "commonGrades": ["Example Grade 1", "Example Grade 2"],
+          "readiness": 85,
+          "innovators": ["Company A", "Company B"]
         }
       ]
       
@@ -306,6 +309,78 @@ export const generateMaterialRecipe = async (problemStatement: string): Promise<
   } catch (error) {
     console.error("Recipe Generation Error:", error);
     throw new Error("Failed to generate recipe.");
+  }
+};
+
+// NEW: Extract Recipe from Patent PDF
+export const extractRecipeFromPatent = async (base64Pdf: string): Promise<MaterialRecipe> => {
+  try {
+    const prompt = `
+      Act as an expert formulation chemist. Analyze the attached patent PDF.
+      
+      Task 1: Reverse Engineer the "Best Mode" or "Preferred Embodiment" formulation. Extract the exact ingredients and percentages (or ranges).
+      Task 2: Extract the "Cooking Instructions" (Processing Logic). Look for temperatures, mixing speeds, screw configurations, or reaction times.
+      Task 3: Act as a creative Chef. Suggest 3 "Variations" based on similar patents or adjacent research that could improve this formulation for modern applications.
+
+      Return ONLY valid JSON matching this structure:
+      {
+        "name": "Extracted Trade Name or Title",
+        "quadrant": "BIO_BIO" | "BIO_DURABLE" | "FOSSIL_BIO" | "NEXT_GEN",
+        "description": "Technical summary of the invention.",
+        "ingredients": [ {"name": "Ingredient", "percentage": "XX%", "function": "Role in formula"} ],
+        "properties": [ {"name": "Property", "value": "Value"} ],
+        "sustainabilityScore": 0, // Estimate 0-100 based on ingredients
+        "applications": ["App 1", "App 2"],
+        "processingSteps": ["Step 1: Dry material at X temp", "Step 2: Extrude at Y RPM"],
+        "variations": [ {"name": "Variation Name", "description": "How to modify it and why (e.g. Add 5% Talc for stiffness)"} ]
+      }
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-pro-preview',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              mimeType: 'application/pdf',
+              data: base64Pdf
+            }
+          },
+          { text: prompt }
+        ]
+      },
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: 'application/json',
+        thinkingConfig: THINKING_CONFIG
+      }
+    });
+
+    const text = response.text || '{}';
+    let rawResult: any = {};
+    try {
+        rawResult = JSON.parse(text);
+    } catch(e) {
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) rawResult = JSON.parse(match[0]);
+    }
+
+    return {
+      ...rawResult,
+      name: rawResult.name || 'Patent Formulation',
+      quadrant: rawResult.quadrant || 'NEXT_GEN',
+      description: cleanText(rawResult.description || ''),
+      ingredients: Array.isArray(rawResult.ingredients) ? rawResult.ingredients.map((i: any) => ({ ...i, function: cleanText(i.function) })) : [],
+      properties: Array.isArray(rawResult.properties) ? rawResult.properties : [],
+      sustainabilityScore: rawResult.sustainabilityScore || 50,
+      applications: Array.isArray(rawResult.applications) ? rawResult.applications : [],
+      processingSteps: Array.isArray(rawResult.processingSteps) ? rawResult.processingSteps.map(cleanText) : [],
+      variations: Array.isArray(rawResult.variations) ? rawResult.variations.map((v: any) => ({ name: cleanText(v.name), description: cleanText(v.description) })) : [],
+    };
+
+  } catch (error) {
+    console.error("Patent Extraction Error:", error);
+    throw new Error("Failed to extract recipe from patent.");
   }
 };
 

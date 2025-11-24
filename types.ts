@@ -98,6 +98,9 @@ export interface MaterialRecipe {
   properties: { name: string; value: string }[];
   sustainabilityScore: number;
   applications: string[];
+  // NEW: Fields for Patent Extraction
+  processingSteps?: string[]; // "How to Cook"
+  variations?: { name: string; description: string }[]; // "Chef's Notes"
 }
 
 export interface LibraryItem extends MaterialRecipe {
@@ -111,6 +114,8 @@ export interface MaterialFamily {
   name: string;
   description: string;
   commonGrades: string[];
+  readiness?: number; // 0-100
+  innovators?: string[];
 }
 
 export interface Manufacturer {

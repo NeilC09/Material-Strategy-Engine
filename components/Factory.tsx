@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Factory as FactoryIcon, Settings, ArrowLeft, Box, Wind, Layers, Droplet, Cog, Cpu, Thermometer, Search, ShoppingBag, Globe, Loader2, ExternalLink, Activity, Sparkles, FlaskConical, AlertTriangle } from 'lucide-react';
+import { Factory as FactoryIcon, Settings, ArrowLeft, Box, Wind, Layers, Droplet, Cog, Cpu, Thermometer, Search, ShoppingBag, Globe, Loader2, ExternalLink, Activity, Play, Pause, CheckCircle2, XCircle, Zap, RotateCcw } from 'lucide-react';
 import { ManufacturingProcess, Manufacturer } from '../types';
 import { findManufacturers } from '../services/geminiService';
 import { SharedContext } from '../App';
@@ -8,7 +7,7 @@ import { SharedContext } from '../App';
 interface FactoryProps {
   initialMaterial?: string;
   onNavigate?: (tab: string, data?: SharedContext) => void;
-  constraints?: string[]; // New: constraints from the Analyzer
+  constraints?: string[];
 }
 
 const processes: ManufacturingProcess[] = [
@@ -19,6 +18,11 @@ const processes: ManufacturingProcess[] = [
     description: 'High-volume production of complex rigid parts.',
     outputs: ['Phone Cases', 'Cutlery', 'Automotive Trim', 'Medical Devices'],
     runLogic: 'Bio-polymers like PHA and PLA are shear-sensitive. Unlike Polypropylene, they degrade rapidly if dwell time is too long.',
+    parameters: [
+      { name: 'Melt Temp', unit: '°C', standardVal: '230', bioVal: '190', insight: 'Lower temp prevents thermal degradation.' },
+      { name: 'Injection Pressure', unit: 'bar', standardVal: '1200', bioVal: '1000', insight: 'Lower pressure to reduce shear stress.' },
+      { name: 'Cooling Time', unit: 's', standardVal: '15', bioVal: '25', insight: 'Longer cooling needed for crystallization.' }
+    ]
   },
   {
     id: 'film',
@@ -27,6 +31,11 @@ const processes: ManufacturingProcess[] = [
     description: 'Continuous extrusion of thin, flexible films.',
     outputs: ['Compost Bags', 'Ag Mulch Film', 'Food Packaging', 'Shopping Bags'],
     runLogic: 'Melt strength is the killer here. Bio-materials often lack the elasticity to hold a stable bubble.',
+    parameters: [
+      { name: 'Die Temp', unit: '°C', standardVal: '190', bioVal: '160', insight: 'Prevent melt fracture at exit.' },
+      { name: 'Blow-Up Ratio', unit: ':1', standardVal: '3.0', bioVal: '2.0', insight: 'Reduced stretching to prevent tears.' },
+      { name: 'Haul-Off Speed', unit: 'm/min', standardVal: '50', bioVal: '35', insight: 'Slower speed for cooling stability.' }
+    ]
   },
   {
     id: 'thermo',
@@ -35,6 +44,11 @@ const processes: ManufacturingProcess[] = [
     description: 'Heating a sheet and vacuum forming it over a mold.',
     outputs: ['Coffee Lids', 'Clamshells', 'Yogurt Cups', 'Trays'],
     runLogic: 'The processing window is extremely narrow. PLA sags rapidly once it passes its Glass Transition (Tg ~60°C).',
+    parameters: [
+      { name: 'Sheet Temp', unit: '°C', standardVal: '150', bioVal: '100', insight: 'Prevent sheet sagging.' },
+      { name: 'Vacuum Pressure', unit: 'mmHg', standardVal: '600', bioVal: '500', insight: 'Gentle forming force.' },
+      { name: 'Mold Temp', unit: '°C', standardVal: '25', bioVal: '40', insight: 'Warm mold prevents warping.' }
+    ]
   },
   {
     id: 'foam',
@@ -43,6 +57,11 @@ const processes: ManufacturingProcess[] = [
     description: 'Creating lightweight cellular structures using gas injection.',
     outputs: ['Shoe Soles', 'Insulation', 'Protective Packaging', 'Yoga Mats'],
     runLogic: 'Gas containment is difficult. CO2 solubility in bioplastics is high, but it diffuses out too fast, causing foam collapse.',
+    parameters: [
+      { name: 'Gas Dosage', unit: '%', standardVal: '5.0', bioVal: '2.5', insight: 'Lower gas to prevent cell rupture.' },
+      { name: 'Expansion Ratio', unit: 'x', standardVal: '10', bioVal: '5', insight: 'Denser foam structure.' },
+      { name: 'Melt Pressure', unit: 'bar', standardVal: '150', bioVal: '180', insight: 'Keep gas dissolved in melt.' }
+    ]
   },
   {
     id: 'fiber',
@@ -51,6 +70,11 @@ const processes: ManufacturingProcess[] = [
     description: 'Extruding filaments for textiles and non-wovens.',
     outputs: ['Apparel', 'Teabags', 'Wipes', 'Carpets'],
     runLogic: 'Moisture is the enemy. Even 50ppm of water will cause hydrolysis in the extruder, breaking the polymer chains.',
+    parameters: [
+      { name: 'Extruder Temp', unit: '°C', standardVal: '260', bioVal: '220', insight: 'Avoid hydrolytic degradation.' },
+      { name: 'Draw Ratio', unit: ':1', standardVal: '4.0', bioVal: '2.5', insight: 'Gentle stretching.' },
+      { name: 'Quench Air', unit: 'm/s', standardVal: '0.8', bioVal: '0.5', insight: 'Low turbulence cooling.' }
+    ]
   },
   {
     id: '3d',
@@ -59,6 +83,11 @@ const processes: ManufacturingProcess[] = [
     description: 'Additive manufacturing layer by layer.',
     outputs: ['Prototypes', 'Custom Jigs', 'Medical Scaffolds', 'Spare Parts'],
     runLogic: 'Heat creep is the main failure mode. Bio-filaments soften way before the nozzle, clogging the throat tube.',
+    parameters: [
+      { name: 'Nozzle Temp', unit: '°C', standardVal: '210', bioVal: '195', insight: 'Prevent stringing.' },
+      { name: 'Bed Temp', unit: '°C', standardVal: '60', bioVal: '45', insight: 'Adhesion without warping.' },
+      { name: 'Print Speed', unit: 'mm/s', standardVal: '60', bioVal: '40', insight: 'Accuracy over speed.' }
+    ]
   },
   {
     id: 'bio',
@@ -67,8 +96,26 @@ const processes: ManufacturingProcess[] = [
     description: 'Growing materials using living organisms.',
     outputs: ['Mycelium Packaging', 'Bacterial Leather', 'Bio-Cement', 'Scaffolds'],
     runLogic: 'This is farming, not manufacturing. You are managing life support systems. The risk is contamination.',
+    parameters: [
+      { name: 'Incubation Temp', unit: '°C', standardVal: 'N/A', bioVal: '25', insight: 'Optimal fungal growth.' },
+      { name: 'Humidity', unit: '%', standardVal: 'N/A', bioVal: '90', insight: 'Prevent drying out.' },
+      { name: 'CO2 Level', unit: 'ppm', standardVal: '400', bioVal: '2000', insight: 'Stimulate vertical growth.' }
+    ]
   }
 ];
+
+const parseRange = (valStr: string): number => {
+    if (!valStr) return 0;
+    const parts = valStr.split('-').map(s => parseFloat(s.trim()));
+    if (parts.length === 2) return (parts[0] + parts[1]) / 2;
+    return parts[0];
+};
+
+interface SimulationResult {
+    qualityScore: number;
+    activeDefects: string[];
+    propertyImpacts: { name: string; change: string; good: boolean }[];
+}
 
 const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constraints = [] }) => {
   const [selectedProcess, setSelectedProcess] = useState<ManufacturingProcess | null>(null);
@@ -76,6 +123,11 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [activeTab, setActiveTab] = useState<'simulate' | 'market'>('simulate');
+  
+  const [userParams, setUserParams] = useState<Record<string, number>>({});
+  const [simulationResult, setSimulationResult] = useState<SimulationResult>({ qualityScore: 100, activeDefects: [], propertyImpacts: [] });
+  const [isPlaying, setIsPlaying] = useState(true);
 
   useEffect(() => {
     if (initialMaterial) setMaterialContext(initialMaterial);
@@ -84,7 +136,55 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
   useEffect(() => {
     setManufacturers([]);
     setHasSearched(false);
+    if (selectedProcess && selectedProcess.parameters) {
+        const initialParams: Record<string, number> = {};
+        selectedProcess.parameters.forEach(p => {
+            initialParams[p.name] = parseRange(p.bioVal);
+        });
+        setUserParams(initialParams);
+    }
   }, [selectedProcess]);
+
+  useEffect(() => {
+      if (!selectedProcess || !isPlaying) return;
+
+      const runPhysics = () => {
+          let totalScore = 100;
+          let defects: string[] = [];
+          let impacts: { name: string; change: string; good: boolean }[] = [];
+
+          selectedProcess.parameters?.forEach(param => {
+             const userVal = userParams[param.name] || 0;
+             const targetVal = parseRange(param.bioVal);
+             const diff = userVal - targetVal;
+             const percentDiff = (diff / targetVal) * 100;
+
+             if (param.name.includes('Temp')) {
+                 if (percentDiff > 10) {
+                     totalScore -= 20;
+                     defects.push('Thermal Degradation');
+                     impacts.push({ name: 'Molecular Weight', change: 'Decreased', good: false });
+                 } else if (percentDiff < -10) {
+                     totalScore -= 15;
+                     defects.push('Short Shot');
+                 }
+             }
+             // Simplified logic for demo...
+             if (Math.abs(percentDiff) > 20) totalScore -= 5;
+          });
+          
+          setSimulationResult({
+              qualityScore: Math.max(0, totalScore),
+              activeDefects: [...new Set(defects)],
+              propertyImpacts: impacts
+          });
+      };
+
+      const interval = setInterval(runPhysics, 500);
+      return () => clearInterval(interval);
+
+  }, [selectedProcess, userParams, isPlaying, constraints]);
+
 
   const handleFindManufacturers = async () => {
     if (!selectedProcess) return;
@@ -99,43 +199,40 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
     setLoading(false);
   };
 
+  const resetParams = () => {
+    if (selectedProcess && selectedProcess.parameters) {
+        const initialParams: Record<string, number> = {};
+        selectedProcess.parameters.forEach(p => {
+            initialParams[p.name] = parseRange(p.bioVal);
+        });
+        setUserParams(initialParams);
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto animate-fade-in pb-20">
+    <div className="max-w-7xl mx-auto animate-fade-in pb-20">
       {!selectedProcess ? (
-        /* GRID VIEW */
+        /* PROCESS SELECTION GRID */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {processes.map((proc) => {
-            // Smart Highlighting based on constraints
-            const warning = constraints.some(c => 
-                (c.toLowerCase().includes('heat') && proc.id === 'injection') ||
-                (c.toLowerCase().includes('moisture') && proc.id === 'fiber') ||
-                (c.toLowerCase().includes('melt') && proc.id === 'film')
-            );
-
             return (
                 <div 
                 key={proc.id}
                 onClick={() => setSelectedProcess(proc)}
-                className={`group bg-white border rounded-xl p-6 cursor-pointer hover:shadow-notion hover:-translate-y-1 transition-all relative overflow-hidden ${warning ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'}`}
+                className={`group bg-obsidian-800 border border-white/10 p-8 cursor-pointer hover:border-cyan-500/50 hover:shadow-glow hover:bg-white/5 transition-all relative overflow-hidden`}
                 >
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <proc.icon size={64} className="text-gray-900" />
+                    <proc.icon size={64} className="text-white" />
                 </div>
-                <div className="mb-4 p-2 bg-gray-50 rounded-lg w-fit">
-                    <proc.icon size={24} className="text-gray-700" />
+                <div className="mb-6 p-3 bg-white/5 border border-white/10 w-fit">
+                    <proc.icon size={24} className="text-white group-hover:text-cyan-400" />
                 </div>
-                <h3 className="font-bold text-gray-900 mb-2">{proc.name}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed mb-4 line-clamp-3">{proc.description}</p>
+                <h3 className="font-bold text-white text-lg mb-2 font-mono uppercase tracking-wide group-hover:text-cyan-400 transition-colors">{proc.name}</h3>
+                <p className="text-sm text-gray-400 leading-relaxed mb-6 line-clamp-3 font-mono">{proc.description}</p>
                 
-                {warning && (
-                    <div className="mb-4 px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
-                        <AlertTriangle size={10} /> Constraint Detected
-                    </div>
-                )}
-
-                <div className="flex flex-wrap gap-1.5 mt-auto">
+                <div className="flex flex-wrap gap-2 mt-auto">
                     {proc.outputs.slice(0, 2).map(out => (
-                        <span key={out} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">{out}</span>
+                        <span key={out} className="text-[10px] bg-white/5 border border-white/10 text-gray-400 px-2 py-1 font-mono uppercase">{out}</span>
                     ))}
                 </div>
                 </div>
@@ -143,127 +240,227 @@ const Factory: React.FC<FactoryProps> = ({ initialMaterial, onNavigate, constrai
           })}
         </div>
       ) : (
-        /* DETAIL VIEW (DASHBOARD) */
-        <div className="animate-fade-in">
-           <button 
-             onClick={() => setSelectedProcess(null)}
-             className="flex items-center gap-2 text-gray-500 hover:text-gray-900 mb-6 text-sm transition-colors"
-           >
-             <ArrowLeft size={16} /> Return to Floor
-           </button>
+        /* INTERACTIVE WORKBENCH */
+        <div className="animate-fade-in h-[calc(100vh-140px)] flex flex-col">
+           {/* Header Bar */}
+           <div className="flex items-center justify-between mb-6 shrink-0 border-b border-white/10 pb-6">
+             <div className="flex items-center gap-6">
+                <button 
+                    onClick={() => setSelectedProcess(null)}
+                    className="text-gray-500 hover:text-white transition-colors"
+                >
+                    <ArrowLeft size={24} />
+                </button>
+                <div>
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-4 font-mono uppercase tracking-tight">
+                        {selectedProcess.name} <span className="text-white/20">/</span> <span className="text-cyan-400">{materialContext}</span>
+                    </h2>
+                </div>
+             </div>
+             
+             <div className="flex gap-4">
+                 <button 
+                    onClick={() => setActiveTab('simulate')}
+                    className={`px-6 py-2 text-xs font-bold font-mono uppercase tracking-wider border transition-all ${activeTab === 'simulate' ? 'bg-cyan-500 text-black border-cyan-500 shadow-neon' : 'text-gray-500 border-transparent hover:text-white'}`}
+                 >
+                    Simulation
+                 </button>
+                 <button 
+                    onClick={() => setActiveTab('market')}
+                    className={`px-6 py-2 text-xs font-bold font-mono uppercase tracking-wider border transition-all ${activeTab === 'market' ? 'bg-cyan-500 text-black border-cyan-500 shadow-neon' : 'text-gray-500 border-transparent hover:text-white'}`}
+                 >
+                    Supply Chain
+                 </button>
+             </div>
+           </div>
 
-           {/* Constraint Warning Banner */}
-           {constraints.length > 0 && (
-               <div className="mb-6 p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-3">
-                   <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
-                       <AlertTriangle size={20} />
-                   </div>
-                   <div>
-                       <h4 className="font-bold text-amber-900 text-sm">Processing Constraints Active</h4>
-                       <p className="text-amber-800 text-xs mt-1">
-                           The validation logic identified risks for this material. Ensure {selectedProcess.name} parameters account for:
-                       </p>
-                       <div className="flex flex-wrap gap-2 mt-2">
-                           {constraints.map((c, i) => (
-                               <span key={i} className="px-2 py-1 bg-white/50 border border-amber-200 rounded text-xs text-amber-900 font-medium">
-                                   {c}
-                               </span>
-                           ))}
-                       </div>
-                   </div>
+           {activeTab === 'simulate' ? (
+               <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden min-h-0">
+                  
+                  {/* LEFT: Controls */}
+                  <div className="lg:col-span-4 bg-obsidian-800 border border-white/10 flex flex-col overflow-hidden">
+                      <div className="p-5 border-b border-white/10 flex justify-between items-center bg-black/20">
+                          <h3 className="font-bold text-gray-400 text-xs uppercase tracking-widest flex items-center gap-2 font-mono">
+                              <Settings size={14} /> Parameters
+                          </h3>
+                          <button onClick={resetParams} className="text-[10px] text-cyan-500 font-bold uppercase tracking-widest hover:text-cyan-400 flex items-center gap-1 font-mono">
+                              <RotateCcw size={10} /> Reset
+                          </button>
+                      </div>
+                      
+                      <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                          {selectedProcess.parameters?.map((param, i) => {
+                              const target = parseRange(param.bioVal);
+                              const current = userParams[param.name] || target;
+                              const min = target * 0.5;
+                              const max = target * 1.5;
+
+                              return (
+                                  <div key={i}>
+                                      <div className="flex justify-between mb-3">
+                                          <label className="text-xs font-bold text-gray-300 font-mono uppercase">{param.name}</label>
+                                          <span className="font-mono font-bold text-cyan-400 text-xs">
+                                              {current.toFixed(0)} {param.unit}
+                                          </span>
+                                      </div>
+                                      <div className="relative h-2 flex items-center">
+                                          <input 
+                                              type="range"
+                                              min={min}
+                                              max={max}
+                                              step={(max-min)/100}
+                                              value={current}
+                                              onChange={(e) => setUserParams(prev => ({...prev, [param.name]: parseFloat(e.target.value)}))}
+                                              className="absolute z-20 w-full h-2 bg-white/10 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-cyan-400 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(34,211,238,0.8)]"
+                                          />
+                                          {/* Optimal Indicator */}
+                                          <div className="absolute h-4 w-0.5 bg-cyan-500 z-10 top-[-4px]" 
+                                               style={{ left: `${((target - min) / (max - min)) * 100}%` }}
+                                          />
+                                      </div>
+                                      <div className="flex justify-between text-[10px] text-gray-600 mt-2 font-mono">
+                                          <span>{min.toFixed(0)}</span>
+                                          <span className="text-cyan-600">TARGET: {param.bioVal}</span>
+                                          <span>{max.toFixed(0)}</span>
+                                      </div>
+                                  </div>
+                              );
+                          })}
+                      </div>
+                  </div>
+
+                  {/* RIGHT: Results */}
+                  <div className="lg:col-span-8 flex flex-col gap-6 overflow-hidden">
+                      
+                      {/* Top Row: Quality Monitor */}
+                      <div className="bg-obsidian-800 border border-white/10 p-8 relative overflow-hidden shrink-0">
+                          <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px] opacity-5"></div>
+                          
+                          <div className="relative z-10 flex items-center justify-between">
+                              <div className="flex items-center gap-12">
+                                  <div className="relative w-32 h-32 flex items-center justify-center">
+                                      <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                          <path className="text-white/5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2" />
+                                          <path 
+                                              className={`${simulationResult.qualityScore > 80 ? 'text-cyan-500' : 'text-red-500'} transition-all duration-500 ease-out`}
+                                              strokeDasharray={`${simulationResult.qualityScore}, 100`}
+                                              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                                              fill="none" 
+                                              stroke="currentColor" 
+                                              strokeWidth="2" 
+                                          />
+                                      </svg>
+                                      <div className="absolute flex flex-col items-center">
+                                          <span className="text-3xl font-mono font-bold text-white">{simulationResult.qualityScore.toFixed(0)}%</span>
+                                      </div>
+                                  </div>
+                                  
+                                  <div>
+                                      <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest font-mono mb-2">Integrity Status</h3>
+                                      <div className="flex items-center gap-3 text-xs text-gray-300 font-mono mb-6">
+                                          <span className={`w-1.5 h-1.5 ${isPlaying ? 'bg-cyan-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                          {isPlaying ? 'PHYSICS ENGINE ACTIVE' : 'SIMULATION PAUSED'}
+                                      </div>
+                                      <button 
+                                        onClick={() => setIsPlaying(!isPlaying)}
+                                        className="border border-white/20 hover:bg-white/10 text-white px-4 py-2 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors font-mono"
+                                      >
+                                        {isPlaying ? <Pause size={12} /> : <Play size={12} />} {isPlaying ? 'PAUSE' : 'RESUME'}
+                                      </button>
+                                  </div>
+                              </div>
+
+                              <div className="w-64 border-l border-white/10 pl-8">
+                                  <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 font-mono">Detected Defects</h4>
+                                  <div className="space-y-2">
+                                      {simulationResult.activeDefects.length === 0 ? (
+                                          <div className="flex items-center gap-2 text-cyan-500 text-xs font-bold font-mono uppercase">
+                                              <CheckCircle2 size={14} /> NOMINAL
+                                          </div>
+                                      ) : (
+                                          simulationResult.activeDefects.map((def, i) => (
+                                              <div key={i} className="flex items-center gap-2 text-red-500 text-xs font-bold font-mono uppercase animate-pulse">
+                                                  <XCircle size={14} /> {def}
+                                              </div>
+                                          ))
+                                      )}
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* Bottom Row: Property Shifts */}
+                      <div className="flex-1 bg-white/5 border border-white/10 p-8 overflow-y-auto">
+                          <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6 flex items-center gap-2 font-mono">
+                              <Activity size={14} /> Property Delta
+                          </h3>
+                          
+                          {simulationResult.propertyImpacts.length === 0 ? (
+                              <div className="text-gray-600 font-mono text-xs">NO_DEVIATION_DETECTED</div>
+                          ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {simulationResult.propertyImpacts.map((impact, i) => (
+                                      <div key={i} className={`p-4 border flex items-center justify-between ${impact.good ? 'bg-cyan-900/10 border-cyan-500/20' : 'bg-red-900/10 border-red-500/20'}`}>
+                                          <div>
+                                              <div className="text-[10px] font-bold uppercase text-gray-500 mb-1 font-mono">{impact.name}</div>
+                                              <div className={`font-bold font-mono text-sm ${impact.good ? 'text-cyan-400' : 'text-red-400'}`}>{impact.change}</div>
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
+                          )}
+                      </div>
+                  </div>
                </div>
-           )}
-
-           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
-              {/* Left Column: Process Info */}
-              <div className="space-y-6">
-                 <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-center relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gray-900"></div>
-                    <div className="w-20 h-20 mx-auto bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                       <selectedProcess.icon size={40} className="text-gray-900" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedProcess.name}</h2>
-                    <p className="text-sm text-gray-500">{selectedProcess.description}</p>
-                 </div>
-
-                 <div className="bg-indigo-900 text-white rounded-xl p-6 shadow-lg relative overflow-hidden">
-                    <h3 className="font-bold text-lg mb-2 flex items-center gap-2"><Activity size={18} /> Process Logic</h3>
-                    <p className="text-indigo-100 text-sm leading-relaxed">
-                       {selectedProcess.runLogic}
-                    </p>
-                 </div>
-              </div>
-
-              {/* Right Column: Commercial Discovery Engine */}
-              <div className="lg:col-span-2 flex flex-col h-full">
-                 <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm flex-1 flex flex-col min-h-[500px]">
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                              <ShoppingBag size={20} className="text-indigo-600" /> Market Discovery
-                           </h3>
-                           <p className="text-sm text-gray-500 mt-1">Find real-world products using {materialContext} via {selectedProcess.name}.</p>
-                        </div>
+           ) : (
+               /* MARKET TAB */
+               <div className="flex-1 bg-obsidian-800 border border-white/10 p-8 flex flex-col">
+                  <div className="flex items-center justify-between mb-8">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-widest font-mono flex items-center gap-2">
+                           <Globe size={16} /> Global Supply Chain
+                        </h3>
                         <button 
                            onClick={handleFindManufacturers}
                            disabled={loading}
-                           className="bg-gray-900 text-white px-6 py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-gray-800 transition-colors disabled:opacity-50 shadow-sm"
+                           className="bg-cyan-500 text-black px-6 py-3 text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-cyan-400 transition-colors font-mono shadow-neon"
                         >
-                           {loading ? <Loader2 className="animate-spin" size={16} /> : <Search size={16} />}
-                           Find Products & Makers
+                           {loading ? <Loader2 className="animate-spin" size={14} /> : <Search size={14} />}
+                           SCAN_PARTNERS
                         </button>
                     </div>
 
-                    <div className="flex-1 bg-gray-50 rounded-xl border border-dashed border-gray-200 p-6 overflow-y-auto">
+                    <div className="flex-1 bg-black/20 border border-white/5 p-6 overflow-y-auto">
                        {!hasSearched && !loading && (
-                          <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center">
-                             <Globe size={48} className="mb-4 text-gray-300" />
-                             <h4 className="font-medium text-gray-600">Market Analysis Inactive</h4>
-                             <p className="text-sm max-w-sm mt-1">Click "Find Products & Makers" to scan the web for companies currently producing this.</p>
+                          <div className="h-full flex flex-col items-center justify-center text-gray-600 font-mono text-xs">
+                             AWAITING_QUERY_INPUT...
                           </div>
                        )}
 
                        {loading && (
-                          <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                             <Loader2 size={48} className="mb-4 text-indigo-500 animate-spin" />
-                             <span className="font-medium text-gray-600">Scanning Global Supply Chain...</span>
-                          </div>
-                       )}
-
-                       {!loading && hasSearched && manufacturers.length === 0 && (
-                          <div className="h-full flex flex-col items-center justify-center text-gray-400 text-center">
-                             <span>No specific products found on the open market.</span>
-                             <span className="text-xs mt-2 mb-4 block">Try a more common material term.</span>
+                          <div className="h-full flex flex-col items-center justify-center text-gray-500 font-mono text-xs">
+                             <Loader2 size={32} className="mb-4 text-cyan-400 animate-spin" />
+                             SCANNING_DATABASE...
                           </div>
                        )}
 
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {manufacturers.map((m, i) => (
-                             <div key={i} className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all group relative">
+                             <div key={i} className="bg-obsidian-900 border border-white/10 p-6 hover:border-cyan-500/30 transition-all group">
                                 <div className="flex justify-between items-start mb-2">
-                                   <h4 className="font-bold text-gray-900 text-lg group-hover:text-indigo-600 transition-colors">{m.name}</h4>
-                                   <a 
-                                      href={m.website} 
-                                      target="_blank" 
-                                      rel="noreferrer"
-                                      className="text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 p-1.5 rounded transition-colors"
-                                   >
-                                      <ExternalLink size={16} />
-                                   </a>
+                                   <h4 className="font-bold text-white text-lg group-hover:text-cyan-400 transition-colors font-mono uppercase">{m.name}</h4>
+                                   <a href={m.website} target="_blank" rel="noreferrer" className="text-gray-600 hover:text-white"><ExternalLink size={14} /></a>
                                 </div>
-                                <p className="text-sm font-medium text-gray-700 mb-3 bg-gray-50 p-2 rounded border border-gray-100">{m.product}</p>
-                                <p className="text-xs text-gray-500 leading-relaxed mb-3">{m.description}</p>
-                                <div className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase tracking-wider mt-auto">
+                                <p className="text-xs font-bold text-gray-500 mb-4 font-mono uppercase">{m.product}</p>
+                                <p className="text-sm text-gray-400 leading-relaxed mb-4 font-mono">{m.description}</p>
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-600 uppercase tracking-widest">
                                    <Globe size={10} /> {m.location}
                                 </div>
                              </div>
                           ))}
                        </div>
                     </div>
-                 </div>
-              </div>
-           </div>
+               </div>
+           )}
         </div>
       )}
     </div>

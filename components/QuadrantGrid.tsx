@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Leaf, ShieldCheck, Droplet, Microscope, ArrowRight, X, 
@@ -17,6 +16,8 @@ interface QuadrantDetail {
   title: string;
   tagline: string;
   color: string;
+  borderColor: string;
+  bgColor: string;
   icon: any;
   definition: string;
   coreLogic: string;
@@ -43,7 +44,9 @@ const quadrantData: Record<string, QuadrantDetail> = {
     id: QuadrantType.BIO_BIO,
     title: "BIO-BIO",
     tagline: "Grown & Returned to Earth",
-    color: "text-emerald-700",
+    color: "text-emerald-400",
+    borderColor: "border-emerald-500/30",
+    bgColor: "bg-emerald-500/5",
     icon: Leaf,
     definition: "Polymers derived from renewable biomass that fully biodegrade in natural environments.",
     coreLogic: "Stability vs. Degradability",
@@ -68,7 +71,9 @@ const quadrantData: Record<string, QuadrantDetail> = {
     id: QuadrantType.BIO_DURABLE,
     title: "BIO-DURABLE",
     tagline: "Green Origins, Permanent",
-    color: "text-orange-700",
+    color: "text-orange-400",
+    borderColor: "border-orange-500/30",
+    bgColor: "bg-orange-500/5",
     icon: ShieldCheck,
     definition: "Chemically identical to fossil plastics but made from bio-feedstock.",
     coreLogic: "Feedstock Substitution",
@@ -93,7 +98,9 @@ const quadrantData: Record<string, QuadrantDetail> = {
     id: QuadrantType.FOSSIL_BIO,
     title: "FOSSIL-BIO",
     tagline: "The Pragmatic Bridge",
-    color: "text-amber-700",
+    color: "text-amber-400",
+    borderColor: "border-amber-500/30",
+    bgColor: "bg-amber-500/5",
     icon: Droplet,
     definition: "Synthetic copolyesters from fossil sources that biodegrade.",
     coreLogic: "Statistical Copolyesters",
@@ -118,7 +125,9 @@ const quadrantData: Record<string, QuadrantDetail> = {
     id: QuadrantType.NEXT_GEN,
     title: "NEXT-GEN",
     tagline: "Grown, Not Made",
-    color: "text-teal-700",
+    color: "text-cyan-400",
+    borderColor: "border-cyan-500/30",
+    bgColor: "bg-cyan-500/5",
     icon: Microscope,
     definition: "Materials produced via biological assembly or biomimicry.",
     coreLogic: "Bio-Fabrication",
@@ -208,35 +217,39 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full p-6 overflow-y-auto bg-obsidian-900">
       {/* HEADER */}
-      <div className="mb-8 animate-fade-in">
-        <div className="h-32 w-full bg-gradient-to-b from-gray-100 to-white rounded-t-lg mb-4 border-b border-gray-100"></div>
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Material Ecosystem</h1>
-        <p className="text-gray-500">Select a quadrant to explore strategic analysis.</p>
+      <div className="mb-12 animate-fade-in">
+        <div className="h-px w-full bg-gradient-to-r from-white/20 to-transparent mb-8"></div>
+        <h1 className="text-5xl font-bold text-white mb-2 tracking-tight font-mono uppercase">Material Ecosystem</h1>
+        <p className="text-gray-400 font-mono text-sm">Initialize quadrant analysis protocol. Select sector to explore.</p>
       </div>
 
       {/* GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
         {Object.values(quadrantData).map((q) => {
           const Icon = q.icon;
           return (
             <div 
               key={q.id}
               onClick={() => { setSelectedId(q.id); setActiveTab('overview'); }}
-              className="group cursor-pointer bg-white border border-gray-200 rounded-lg p-6 hover:bg-gray-50 transition-all hover:shadow-card relative overflow-hidden"
+              className={`group cursor-pointer bg-obsidian-800 border ${q.borderColor} rounded-sm p-8 hover:bg-white/5 transition-all hover:shadow-glow relative overflow-hidden`}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-2 rounded-md bg-gray-100 ${q.color} bg-opacity-10`}>
-                  <Icon size={24} className={q.color} />
-                </div>
-                <ArrowRight size={18} className="text-gray-300 group-hover:text-gray-600 transition-colors" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">{q.title}</h3>
-              <p className="text-sm text-gray-500 mb-4 line-clamp-2">{q.definition}</p>
+              {/* Scanline effect on hover */}
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
               
-              <div className="flex items-center gap-2 text-xs text-gray-400 font-mono uppercase">
-                 <span className="w-2 h-2 rounded-full bg-gray-300"></span> {q.stats.cost} Cost
+              <div className="flex items-start justify-between mb-6 relative z-10">
+                <div className={`p-3 rounded-none ${q.bgColor} border border-white/5`}>
+                  <Icon size={28} className={q.color} />
+                </div>
+                <ArrowRight size={20} className="text-gray-600 group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-100 mb-2 font-mono tracking-wider">{q.title}</h3>
+              <p className="text-sm text-gray-400 mb-6 line-clamp-2 font-sans leading-relaxed">{q.definition}</p>
+              
+              <div className="flex items-center gap-3 text-xs text-gray-500 font-mono uppercase tracking-widest border-t border-white/5 pt-4">
+                 <span className={`w-1.5 h-1.5 ${q.color.replace('text-', 'bg-')} rounded-full`}></span> 
+                 Cost Index: <span className="text-white">{q.stats.cost}</span>
               </div>
             </div>
           );
@@ -245,102 +258,101 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
 
       {/* SIDE PEEK OVERLAY */}
       {selectedId && activeData && (
-        <div className="fixed inset-0 bg-black/20 z-40 flex justify-end" onClick={() => setSelectedId(null)}>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-end" onClick={() => setSelectedId(null)}>
           <div 
-            className="w-full max-w-2xl bg-white h-full shadow-xl animate-fade-in flex flex-col"
+            className="w-full max-w-3xl bg-obsidian-800 h-full shadow-[0_0_50px_rgba(34,211,238,0.1)] animate-fade-in flex flex-col border-l border-white/10"
             onClick={e => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-8 py-6 border-b border-gray-100 flex items-start justify-between bg-white">
+            <div className="px-8 py-8 border-b border-white/10 flex items-start justify-between bg-obsidian-800">
               <div>
-                 <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
-                    <span className="px-1.5 py-0.5 rounded bg-gray-100 text-xs">Quadrant</span>
-                    <span>/</span>
-                    <span>{activeData.title}</span>
+                 <div className="flex items-center gap-2 text-gray-500 text-xs font-mono mb-3 uppercase tracking-widest">
+                    <span className="text-white/50">Quadrant_ID</span>
+                    <span className="text-white/30">/</span>
+                    <span className={activeData.color}>{activeData.title}</span>
                  </div>
-                 <h2 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                   <activeData.icon className={activeData.color} size={28} />
+                 <h2 className="text-4xl font-bold text-white flex items-center gap-4 font-mono">
                    {activeData.title}
                  </h2>
-                 <p className="text-gray-500 mt-1">{activeData.tagline}</p>
+                 <p className="text-gray-400 mt-2 font-mono text-sm">{activeData.tagline}</p>
               </div>
               <div className="flex gap-2">
-                 <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100"><X size={20} /></button>
+                 <button onClick={() => setSelectedId(null)} className="text-gray-500 hover:text-white p-2 hover:bg-white/10 rounded-sm transition-colors"><X size={24} /></button>
               </div>
             </div>
 
             {/* Tabs */}
-            <div className="px-8 border-b border-gray-200 flex gap-6 sticky top-0 bg-white z-10">
+            <div className="px-8 border-b border-white/10 flex gap-8 bg-obsidian-800/50 backdrop-blur-md sticky top-0 z-20">
               {['overview', 'engineering', 'players', 'intel'].map(t => (
                 <button
                   key={t}
                   onClick={() => setActiveTab(t as any)}
-                  className={`py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === t ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                  className={`py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-colors ${activeTab === t ? 'border-cyan-400 text-cyan-400 shadow-glow' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
                 >
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                  {t}
                 </button>
               ))}
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8 bg-white">
+            <div className="flex-1 overflow-y-auto p-8 bg-obsidian-900">
               {activeTab === 'overview' && (
-                <div className="space-y-8">
+                <div className="space-y-10">
                    {/* Stats Block */}
-                   <div className="grid grid-cols-3 gap-4 pb-6 border-b border-gray-100">
-                      <div>
-                        <div className="text-xs text-gray-400 uppercase font-bold mb-1">Sustainability</div>
-                        <div className="text-xl font-medium text-gray-900">{activeData.stats.sustainability}/100</div>
+                   <div className="grid grid-cols-3 gap-px bg-white/10 border border-white/10">
+                      <div className="bg-obsidian-800 p-6 text-center group hover:bg-white/5 transition-colors">
+                        <div className="text-[10px] text-gray-500 uppercase font-bold mb-2 tracking-widest">Sustainability</div>
+                        <div className={`text-3xl font-mono font-bold ${activeData.color}`}>{activeData.stats.sustainability}/100</div>
                       </div>
-                      <div>
-                        <div className="text-xs text-gray-400 uppercase font-bold mb-1">Readiness</div>
-                        <div className="text-xl font-medium text-gray-900">{activeData.stats.readiness}%</div>
+                      <div className="bg-obsidian-800 p-6 text-center group hover:bg-white/5 transition-colors">
+                        <div className="text-[10px] text-gray-500 uppercase font-bold mb-2 tracking-widest">Readiness</div>
+                        <div className="text-3xl font-mono font-bold text-white">{activeData.stats.readiness}%</div>
                       </div>
-                      <div>
-                        <div className="text-xs text-gray-400 uppercase font-bold mb-1">Scalability</div>
-                        <div className="text-xl font-medium text-gray-900">{activeData.stats.scalability}%</div>
+                      <div className="bg-obsidian-800 p-6 text-center group hover:bg-white/5 transition-colors">
+                        <div className="text-[10px] text-gray-500 uppercase font-bold mb-2 tracking-widest">Scalability</div>
+                        <div className="text-3xl font-mono font-bold text-white">{activeData.stats.scalability}%</div>
                       </div>
                    </div>
 
                    {/* Families */}
                    <div>
-                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2"><Layers size={16} /> Material Families</h3>
+                     <div className="flex justify-between items-center mb-6 pb-2 border-b border-white/10">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2"><Layers size={14} /> Material Families</h3>
                         <button 
                           onClick={handleDiscovery}
                           disabled={discoveryLoading}
-                          className="text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1.5 rounded-full hover:bg-indigo-100 flex items-center gap-1.5 font-bold transition-colors"
+                          className="text-xs bg-cyan-900/10 border border-cyan-500/30 text-cyan-400 px-4 py-2 rounded-sm hover:bg-cyan-500/20 flex items-center gap-2 font-bold transition-all font-mono uppercase shadow-glow"
                         >
                            {discoveryLoading ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
-                           Scout Emerging Classes
+                           [ Scout_Emerging ]
                         </button>
                      </div>
                      
-                     <div className="space-y-3">
+                     <div className="grid gap-4">
                        {/* Standard Families */}
                        {activeData.families.map((fam, i) => (
-                         <div key={`std-${i}`} className="group border border-gray-200 rounded-md p-4 hover:bg-gray-50 transition-colors">
-                            <div className="flex justify-between items-center mb-1">
-                               <span className="font-medium text-gray-900">{fam.name}</span>
+                         <div key={`std-${i}`} className="group bg-obsidian-800 border border-white/10 p-5 hover:border-white/30 transition-colors">
+                            <div className="flex justify-between items-center mb-2">
+                               <span className="font-bold text-white text-lg">{fam.name}</span>
                                <div className="opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity">
                                   <button 
                                     onClick={() => onNavigate('factory', { material: fam.name })}
-                                    className="text-xs bg-white border border-gray-200 px-2 py-1 rounded hover:bg-gray-100 flex items-center gap-1"
+                                    className="text-[10px] bg-white text-black px-3 py-1.5 font-bold uppercase hover:bg-gray-200 flex items-center gap-2"
                                   >
-                                    <Factory size={10} /> Manufacture
+                                    <Factory size={12} /> Build
                                   </button>
                                   <button 
                                     onClick={() => onNavigate('patents', { query: fam.name })}
-                                    className="text-xs bg-white border border-gray-200 px-2 py-1 rounded hover:bg-gray-100 flex items-center gap-1"
+                                    className="text-[10px] border border-white/30 text-white px-3 py-1.5 font-bold uppercase hover:bg-white/10 flex items-center gap-2"
                                   >
-                                    <FileText size={10} /> Patents
+                                    <FileText size={12} /> IP
                                   </button>
                                </div>
                             </div>
-                            <p className="text-sm text-gray-600">{fam.description}</p>
-                            <div className="flex flex-wrap gap-1 mt-2">
+                            <p className="text-sm text-gray-400 font-mono mb-3">{fam.description}</p>
+                            <div className="flex flex-wrap gap-2">
                               {fam.commonGrades.map(g => (
-                                <span key={g} className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{g}</span>
+                                <span key={g} className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2 py-1 font-mono">{g}</span>
                               ))}
                             </div>
                          </div>
@@ -348,30 +360,16 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
 
                        {/* Discovered Families */}
                        {discoveredFamilies.map((fam, i) => (
-                         <div key={`disc-${i}`} className="group border border-indigo-100 bg-indigo-50/30 rounded-md p-4 hover:bg-indigo-50 transition-colors animate-fade-in">
-                            <div className="flex justify-between items-center mb-1">
-                               <span className="font-bold text-indigo-900 flex items-center gap-2">
-                                  <Sparkles size={12} className="text-indigo-500" /> {fam.name}
+                         <div key={`disc-${i}`} className="group bg-cyan-900/10 border border-cyan-500/30 p-5 hover:bg-cyan-900/20 transition-colors animate-fade-in">
+                            <div className="flex justify-between items-center mb-2">
+                               <span className="font-bold text-cyan-400 flex items-center gap-2">
+                                  <Sparkles size={14} /> {fam.name}
                                </span>
-                               <div className="opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity">
-                                  <button 
-                                    onClick={() => onNavigate('factory', { material: fam.name })}
-                                    className="text-xs bg-white border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-100 text-indigo-700 flex items-center gap-1"
-                                  >
-                                    <Factory size={10} /> Manufacture
-                                  </button>
-                                  <button 
-                                    onClick={() => onNavigate('patents', { query: fam.name })}
-                                    className="text-xs bg-white border border-indigo-200 px-2 py-1 rounded hover:bg-indigo-100 text-indigo-700 flex items-center gap-1"
-                                  >
-                                    <FileText size={10} /> Patents
-                                  </button>
-                               </div>
                             </div>
-                            <p className="text-sm text-indigo-800">{fam.description}</p>
-                            <div className="flex flex-wrap gap-1 mt-2">
+                            <p className="text-sm text-cyan-200/70 font-mono mb-3">{fam.description}</p>
+                            <div className="flex flex-wrap gap-2">
                               {fam.commonGrades.map(g => (
-                                <span key={g} className="text-[10px] bg-white border border-indigo-100 text-indigo-500 px-1.5 py-0.5 rounded">{g}</span>
+                                <span key={g} className="text-[10px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 px-2 py-1 font-mono">{g}</span>
                               ))}
                             </div>
                          </div>
@@ -383,36 +381,46 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
 
               {activeTab === 'engineering' && (
                 <div className="space-y-6">
-                   <div className="p-4 bg-amber-50 border border-amber-100 rounded-md">
-                      <h4 className="text-amber-800 font-bold text-sm mb-2 flex items-center gap-2"><AlertTriangle size={14} /> Challenges</h4>
-                      <ul className="list-disc list-inside text-sm text-amber-900 space-y-1">
-                        {activeData.engineering.challenges.map(c => <li key={c}>{c}</li>)}
+                   <div className="p-6 bg-amber-900/10 border border-amber-500/30 rounded-sm">
+                      <h4 className="text-amber-500 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2"><AlertTriangle size={14} /> Engineering Challenges</h4>
+                      <ul className="space-y-3">
+                        {activeData.engineering.challenges.map(c => (
+                           <li key={c} className="flex items-start gap-3 text-sm text-gray-300 font-mono">
+                              <span className="mt-1.5 w-1.5 h-1.5 bg-amber-500 flex-shrink-0"></span>
+                              {c}
+                           </li>
+                        ))}
                       </ul>
                    </div>
-                   <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
-                      <h4 className="text-blue-800 font-bold text-sm mb-2 flex items-center gap-2"><Activity size={14} /> Processing</h4>
-                      <ul className="list-disc list-inside text-sm text-blue-900 space-y-1">
-                        {activeData.engineering.processing.map(c => <li key={c}>{c}</li>)}
+                   <div className="p-6 bg-cyan-900/10 border border-cyan-500/30 rounded-sm">
+                      <h4 className="text-cyan-400 font-bold text-xs uppercase tracking-widest mb-4 flex items-center gap-2"><Activity size={14} /> Processing Logic</h4>
+                      <ul className="space-y-3">
+                        {activeData.engineering.processing.map(c => (
+                           <li key={c} className="flex items-start gap-3 text-sm text-gray-300 font-mono">
+                              <span className="mt-1.5 w-1.5 h-1.5 bg-cyan-500 flex-shrink-0"></span>
+                              {c}
+                           </li>
+                        ))}
                       </ul>
                    </div>
                 </div>
               )}
 
               {activeTab === 'players' && (
-                <div className="space-y-2">
+                <div className="grid gap-px bg-white/10 border border-white/10">
                    {activeData.players.map((p, i) => (
-                     <div key={i} className="flex items-center justify-between p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded">
-                        <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center text-gray-500 font-bold text-xs">
+                     <div key={i} className="flex items-center justify-between p-4 bg-obsidian-800 hover:bg-white/5 transition-colors group">
+                        <div className="flex items-center gap-4">
+                           <div className="w-10 h-10 bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 font-bold font-mono text-sm group-hover:text-cyan-400 group-hover:border-cyan-500/30">
                               {p.name.charAt(0)}
                            </div>
                            <div>
-                             <div className="text-sm font-medium text-gray-900">{p.name}</div>
-                             <div className="text-xs text-gray-500">{p.tech}</div>
+                             <div className="text-sm font-bold text-white tracking-wide">{p.name}</div>
+                             <div className="text-xs text-gray-500 font-mono">{p.tech}</div>
                            </div>
                         </div>
-                        <button onClick={() => onNavigate('patents', { query: p.name })} className="text-gray-400 hover:text-gray-600">
-                           <FileText size={16} />
+                        <button onClick={() => onNavigate('patents', { query: p.name })} className="text-gray-600 hover:text-white p-2">
+                           <FileText size={18} />
                         </button>
                      </div>
                    ))}
@@ -420,42 +428,48 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
               )}
 
               {activeTab === 'intel' && (
-                <div className="space-y-4">
+                <div className="space-y-6">
                    {/* Embedded Chat */}
-                   <div className="border border-gray-200 rounded-lg p-4 bg-gray-50 mb-6">
-                      <div className="max-h-40 overflow-y-auto space-y-3 mb-3">
+                   <div className="border border-white/10 bg-black/40 p-6">
+                      <div className="max-h-60 overflow-y-auto space-y-4 mb-4 scrollbar-thin scrollbar-thumb-gray-700">
                          {chatMessages.map(m => (
-                           <div key={m.id} className={`text-sm ${m.role === 'user' ? 'text-right text-gray-900' : 'text-left text-gray-600'}`}>
-                              <span className={`inline-block px-3 py-2 rounded-lg ${m.role === 'user' ? 'bg-white border border-gray-200' : 'bg-transparent'}`}>
+                           <div key={m.id} className={`text-sm font-mono ${m.role === 'user' ? 'text-right' : 'text-left'}`}>
+                              <span className={`inline-block px-4 py-2 ${m.role === 'user' ? 'bg-cyan-900/20 text-cyan-100 border border-cyan-500/30' : 'bg-white/10 text-gray-300 border border-white/10'}`}>
                                 {m.content}
                               </span>
                            </div>
                          ))}
-                         {chatLoading && <Loader2 className="animate-spin text-gray-400" size={16} />}
+                         {chatLoading && <div className="text-xs font-mono text-cyan-500 animate-pulse">PROCESSING_QUERY...</div>}
                          <div ref={chatEndRef} />
                       </div>
-                      <form onSubmit={handleChatSend} className="flex gap-2">
+                      <form onSubmit={handleChatSend} className="flex gap-2 border-t border-white/10 pt-4">
                          <input 
                             value={chatInput}
                             onChange={e => setChatInput(e.target.value)}
-                            placeholder={`Ask AI about ${activeData.title}...`}
-                            className="flex-1 text-sm bg-white border border-gray-200 rounded px-3 py-1 focus:outline-none focus:border-gray-400"
+                            placeholder={`QUERY_DATABASE: ${activeData.title}...`}
+                            className="flex-1 bg-transparent text-white font-mono text-sm placeholder-gray-600 focus:outline-none"
                          />
-                         <button type="submit" className="p-1 text-gray-500 hover:text-gray-900"><Send size={16} /></button>
+                         <button type="submit" className="text-white hover:text-cyan-400"><Send size={18} /></button>
                       </form>
                    </div>
 
                    {/* News Feed */}
-                   {intelLoading && <div className="text-sm text-gray-400">Loading market intel...</div>}
-                   {intelData.map((item, i) => (
-                     <div key={i} className="block p-3 border border-gray-200 rounded hover:border-gray-300 transition-colors">
-                        <a href={item.url} target="_blank" rel="noreferrer" className="font-medium text-gray-900 hover:underline flex items-center gap-2">
-                           {item.title} <ExternalLink size={12} className="text-gray-400" />
-                        </a>
-                        <p className="text-xs text-gray-500 mt-1">{item.snippet}</p>
-                        <div className="text-[10px] text-gray-400 mt-2 uppercase">{item.source}</div>
-                     </div>
-                   ))}
+                   <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-8 mb-4 border-b border-white/10 pb-2">Latest Intelligence</h4>
+                   {intelLoading && <div className="text-xs font-mono text-gray-500">FETCHING_DATAFEED...</div>}
+                   <div className="space-y-3">
+                    {intelData.map((item, i) => (
+                        <div key={i} className="block p-4 border border-white/10 bg-white/5 hover:bg-white/10 transition-colors group">
+                            <a href={item.url} target="_blank" rel="noreferrer" className="font-bold text-gray-200 hover:text-cyan-400 flex items-start justify-between gap-4">
+                            <span>{item.title}</span>
+                            <ExternalLink size={14} className="shrink-0 text-gray-600 group-hover:text-cyan-400" />
+                            </a>
+                            <div className="flex items-center gap-2 mt-3 text-[10px] text-gray-500 font-mono uppercase">
+                                <span className="w-1 h-1 bg-cyan-500 rounded-full"></span>
+                                {item.source}
+                            </div>
+                        </div>
+                    ))}
+                   </div>
                 </div>
               )}
             </div>

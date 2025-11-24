@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Material Strategy Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
         theme: {
@@ -15,33 +15,34 @@
               mono: ['JetBrains Mono', 'monospace'],
             },
             colors: {
-              gray: {
-                25: '#FCFCFD', // Extra light gray
-                50: '#F9FAFB',
-                100: '#F3F4F6',
-                200: '#E5E7EB',
-                300: '#D1D5DB',
-                400: '#9CA3AF',
-                500: '#6B7280',
-                600: '#4B5563',
-                700: '#374151',
-                800: '#1F2937',
-                900: '#111827',
+              obsidian: {
+                950: '#020204', // Void
+                900: '#050505', // Deepest
+                800: '#0A0A0A',
+                700: '#121212', // Card BG
+                600: '#1A1A1A', // Hover
+                500: '#262626', // Borders
+              },
+              cyan: {
+                400: '#22d3ee', // Bright Cyan (Neon)
+                500: '#06b6d4', // Primary Cyan
+                600: '#0891b2', // Darker Cyan
+                900: '#164e63', // Deep Cyan Background
+                950: '#083344', // Dark Cyan Text
               }
             },
             boxShadow: {
-              'notion': 'rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 3px 6px, rgba(15, 15, 15, 0.2) 0px 9px 24px',
-              'card': 'rgba(15, 15, 15, 0.1) 0px 1px 2px 0px',
+              'glow': '0 0 20px rgba(34, 211, 238, 0.15)',
+              'neon': '0 0 10px rgba(34, 211, 238, 0.5)',
             },
             animation: {
-              'blob': 'blob 7s infinite',
+              'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'scanline': 'scanline 8s linear infinite',
             },
             keyframes: {
-              blob: {
-                '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                '100%': { transform: 'translate(0px, 0px) scale(1)' },
+              scanline: {
+                '0%': { transform: 'translateY(-100%)' },
+                '100%': { transform: 'translateY(100%)' },
               }
             }
           },
@@ -50,24 +51,30 @@
     </script>
     <style>
       body {
-        background-color: #ffffff;
-        color: #374151;
+        background-color: #050505;
+        color: #E5E5E5;
         -webkit-font-smoothing: antialiased;
       }
-      /* Notion-like Scrollbar */
+      
+      ::selection {
+        background: #22d3ee;
+        color: #000;
+      }
+      
+      /* Brutalist Scrollbar */
       ::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: transparent;
+        background: #0A0A0A;
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(0, 0, 0, 0.06); 
-        border-radius: 5px;
+        background: #333; 
+        border-radius: 0px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(0, 0, 0, 0.15); 
+        background: #22d3ee; 
       }
       
       .no-scrollbar::-webkit-scrollbar {
@@ -80,11 +87,26 @@
       
       /* Animations */
       @keyframes fade-in {
-        from { opacity: 0; transform: translateY(5px); }
+        from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
       }
       .animate-fade-in {
-        animation: fade-in 0.3s ease-out forwards;
+        animation: fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      /* Input Autofill fix for dark mode */
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover, 
+      input:-webkit-autofill:focus, 
+      textarea:-webkit-autofill,
+      textarea:-webkit-autofill:hover,
+      textarea:-webkit-autofill:focus,
+      select:-webkit-autofill,
+      select:-webkit-autofill:hover,
+      select:-webkit-autofill:focus {
+        -webkit-text-fill-color: #E5E5E5;
+        -webkit-box-shadow: 0 0 0px 1000px #121212 inset;
+        transition: background-color 5000s ease-in-out 0s;
       }
     </style>
   <script type="importmap">

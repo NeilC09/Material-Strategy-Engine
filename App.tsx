@@ -7,6 +7,7 @@ import ChatInterface from './components/ChatInterface';
 import MarketIntel from './components/MarketIntel';
 import PatentHub from './components/PatentHub';
 import MaterialLibrary from './components/MaterialLibrary';
+import ResearchFeed from './components/ResearchFeed'; // NEW
 import { MaterialRecipe, LibraryItem } from './types';
 
 export interface SharedContext {
@@ -37,8 +38,6 @@ const App: React.FC = () => {
       category: 'Custom'
     };
     setLibraryItems(prev => [newItem, ...prev]);
-    // Optionally stay on workstation or move to library
-    // setActiveTab('library'); 
   };
 
   const renderContent = () => {
@@ -51,6 +50,8 @@ const App: React.FC = () => {
         return <MaterialLibrary items={libraryItems} onNavigate={handleNavigate} />;
       case 'patents':
         return <PatentHub initialQuery={sharedContext.query} />;
+      case 'research': // NEW
+        return <ResearchFeed />;
       case 'chat':
         return <ChatInterface />;
       case 'intel':
@@ -61,26 +62,28 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-white text-gray-800 font-sans overflow-hidden">
+    <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans overflow-hidden">
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 border-r border-gray-200 bg-gray-50/80 backdrop-blur-md flex-shrink-0 overflow-hidden flex flex-col relative z-30`}>
+      <div className={`${sidebarOpen ? 'w-72' : 'w-0'} transition-all duration-300 border-r border-slate-200 bg-white flex-shrink-0 overflow-hidden flex flex-col relative z-30`}>
          <Header activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 h-full overflow-hidden relative z-10 bg-white">
+      <main className="flex-1 h-full overflow-hidden relative z-10 bg-slate-50 text-slate-900">
         {/* Mobile Sidebar Toggle */}
         <div className="absolute top-4 left-4 z-50 md:hidden">
            <button 
              onClick={() => setSidebarOpen(!sidebarOpen)}
-             className="p-2 rounded-md bg-white shadow-sm border border-gray-200 text-gray-500"
+             className="p-2 rounded-lg bg-white shadow-sm border border-slate-200 text-slate-500 hover:text-slate-900"
            >
              Menu
            </button>
         </div>
 
         {/* Content Area */}
-        {renderContent()}
+        <div className="h-full overflow-y-auto">
+           {renderContent()}
+        </div>
       </main>
     </div>
   );
