@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FileText, Search, Upload, Loader2, ExternalLink, File, MessageSquare, Download } from 'lucide-react';
+import { FileText, Search, Upload, Loader2, ExternalLink, File, MessageSquare, Download, AlertTriangle } from 'lucide-react';
 import { searchPatents, analyzePatentPdf, chatWithPatentContext } from '../services/geminiService';
 import { Patent, AnalysisResult, ChatMessage } from '../types';
 
@@ -222,6 +222,23 @@ const PatentHub: React.FC<PatentHubProps> = ({ initialQuery }) => {
                               </div>
                            </div>
                         </div>
+
+                        {/* Constraints Section */}
+                        {analysis.constraints && analysis.constraints.length > 0 && (
+                            <div>
+                               <label className="text-xs font-bold text-gray-400 uppercase mb-2 block flex items-center gap-1">
+                                  <AlertTriangle size={12} className="text-amber-500" /> Constraints & Risks
+                               </label>
+                               <div className="space-y-2">
+                                  {analysis.constraints.map((c, i) => (
+                                     <div key={i} className="flex items-start gap-2 p-2.5 bg-amber-50 border border-amber-100/50 rounded-lg text-sm text-amber-900">
+                                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                        <span className="leading-relaxed text-xs font-medium">{c}</span>
+                                     </div>
+                                  ))}
+                               </div>
+                            </div>
+                        )}
                      </div>
                   </div>
                )}

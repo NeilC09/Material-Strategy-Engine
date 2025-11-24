@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Chat } from "@google/genai";
-import { AnalysisResult, NewsItem, Patent, MaterialRecipe, MaterialFamily, Manufacturer } from '../types';
+import { AnalysisResult, NewsItem, Patent, MaterialRecipe, MaterialFamily, Manufacturer, IntelBriefing } from '../types';
 
 const apiKey = process.env.API_KEY || '';
 
@@ -29,13 +29,12 @@ You are the **Material Strategy Engine**, a specialized industrial intelligence 
 1. **REAL-TIME SEARCH:** Use Google Search for 2024-2025 data on companies/patents.
 2. **MARKET FOCUS:** Focus on commercially available products and real-world companies.
 3. **PLAIN TEXT:** Do not use markdown formatting (no bolding, no headers). Use clear paragraph breaks and bullet points (using hyphens) for readability.
-
-**INTERACTION PROTOCOL:**
-1. Identify Product/Material.
-2. Assign Quadrant.
-3. Apply 3 Pillars.
-4. Cite strategies.
+4. **DEEP REASONING:** When analyzing complex engineering problems, think step-by-step through chemical and physical constraints.
 `;
+
+const THINKING_CONFIG = {
+  thinkingBudget: 32768
+};
 
 // Helper to strip markdown and formatting artifacts
 const cleanText = (text: string): string => {
@@ -62,7 +61,7 @@ export const getChatResponse = async (message: string): Promise<string> => {
         model: 'gemini-3-pro-preview',
         config: {
           systemInstruction: SYSTEM_INSTRUCTION,
-          temperature: 0.7,
+          thinkingConfig: THINKING_CONFIG
         }
       });
     }
@@ -86,10 +85,11 @@ export const askQuadrantQuestion = async (quadrant: string, topic: string): Prom
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
+        thinkingConfig: THINKING_CONFIG
       }
     });
 
@@ -124,6 +124,7 @@ export const discoverEmergingPolymers = async (quadrant: string): Promise<Materi
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: 'application/json',
+        thinkingConfig: THINKING_CONFIG
       }
     });
 
@@ -221,6 +222,7 @@ export const analyzeMaterial = async (input: string): Promise<AnalysisResult> =>
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: 'application/json',
+        thinkingConfig: THINKING_CONFIG
       }
     });
 
@@ -278,6 +280,7 @@ export const generateMaterialRecipe = async (problemStatement: string): Promise<
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: 'application/json',
+        thinkingConfig: THINKING_CONFIG
       }
     });
 
@@ -370,6 +373,73 @@ export const searchMarketIntel = async (query: string): Promise<NewsItem[]> => {
   }
 };
 
+export const getDailyIntelBriefing = async (): Promise<IntelBriefing> => {
+    try {
+        const prompt = `
+          Act as an Editor-in-Chief for a Material Science publication.
+          Perform a broad search for the latest news in "Biomaterials", "Sustainable Polymers", "Bio-startups", and "Material Science Research" from the last 7 days (or recent 2024-2025 news).
+          
+          Synthesize the findings into a structured "Daily Briefing".
+          Categorize the news into three specific arrays:
+          1. commercialMoves: Funding, M&A, startups, product launches.
+          2. researchBreakthroughs: Academic papers, university discoveries, new technologies.
+          3. policyUpdates: Regulations, bans, government grants (EU/US/Asia).
+          
+          Return valid JSON:
+          {
+             "date": "Today's Date",
+             "summary": "A 1-sentence executive summary of the day's vibe.",
+             "commercialMoves": [ {"title": "...", "snippet": "...", "source": "...", "url": "..."} ],
+             "researchBreakthroughs": [ {"title": "...", "snippet": "...", "source": "...", "url": "..."} ],
+             "policyUpdates": [ {"title": "...", "snippet": "...", "source": "...", "url": "..."} ]
+          }
+        `;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-pro-preview',
+            contents: prompt,
+            config: {
+                tools: [{ googleSearch: {} }],
+                systemInstruction: SYSTEM_INSTRUCTION,
+                responseMimeType: 'application/json',
+                thinkingConfig: THINKING_CONFIG
+            }
+        });
+
+        const text = response.text || '{}';
+        let raw: any = {};
+        try {
+            raw = JSON.parse(text);
+        } catch (e) {
+            const match = text.match(/\{[\s\S]*\}/);
+            if (match) raw = JSON.parse(match[0]);
+        }
+
+        // Helper to map and clean
+        const mapItems = (arr: any[]) => Array.isArray(arr) ? arr.map(i => ({
+            title: cleanText(i.title || 'Untitled'),
+            snippet: cleanText(i.snippet || ''),
+            source: cleanText(i.source || 'Web'),
+            url: i.url || '#'
+        })) : [];
+
+        // Extract grounding links if JSON urls are empty (fallback)
+        // Note: With responseMimeType=JSON and googleSearch, Gemini 3 Pro usually populates the fields correctly from the tool usage.
+        
+        return {
+            date: raw.date || new Date().toLocaleDateString(),
+            summary: cleanText(raw.summary || 'Daily briefing ready.'),
+            commercialMoves: mapItems(raw.commercialMoves),
+            researchBreakthroughs: mapItems(raw.researchBreakthroughs),
+            policyUpdates: mapItems(raw.policyUpdates)
+        };
+
+    } catch (error) {
+        console.error("Briefing Error:", error);
+        throw new Error("Failed to generate briefing.");
+    }
+};
+
 export const searchPatents = async (company: string): Promise<Patent[]> => {
   try {
     const response = await ai.models.generateContent({
@@ -449,6 +519,7 @@ export const analyzePatentPdf = async (base64Pdf: string): Promise<AnalysisResul
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: 'application/json',
+        thinkingConfig: THINKING_CONFIG
       }
     });
 
@@ -483,7 +554,7 @@ export const analyzePatentPdf = async (base64Pdf: string): Promise<AnalysisResul
 export const chatWithPatentContext = async (message: string, base64Pdf: string, history: any[]): Promise<string> => {
   try {
     const chat = ai.chats.create({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-pro-preview',
       history: [
         {
           role: 'user',
@@ -497,7 +568,10 @@ export const chatWithPatentContext = async (message: string, base64Pdf: string, 
            parts: [{ text: "Understood. I have analyzed the patent PDF. What would you like to know?" }]
         },
         ...history
-      ]
+      ],
+      config: {
+        thinkingConfig: THINKING_CONFIG
+      }
     });
 
     const result = await chat.sendMessage({ message });

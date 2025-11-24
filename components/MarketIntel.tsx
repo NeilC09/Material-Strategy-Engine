@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import createGlobe from 'cobe';
-import { Globe, MapPin, ExternalLink, Factory, Leaf, Search, Loader2, ShieldCheck, Droplet, Microscope, Navigation, Filter, X, Zap } from 'lucide-react';
-import { searchMarketIntel } from '../services/geminiService';
-import { NewsItem, QuadrantType } from '../types';
+import { Globe, MapPin, ExternalLink, Factory, Leaf, Search, Loader2, ShieldCheck, Droplet, Microscope, Navigation, Filter, X, Zap, Newspaper, Briefcase, FlaskConical, Gavel, LayoutList } from 'lucide-react';
+import { searchMarketIntel, getDailyIntelBriefing } from '../services/geminiService';
+import { NewsItem, QuadrantType, IntelBriefing } from '../types';
 
 interface CompanyNode {
   id: string;
@@ -83,12 +83,17 @@ const companies: CompanyNode[] = [
 ];
 
 const MarketIntel: React.FC = () => {
+  const [viewMode, setViewMode] = useState<'MAP' | 'FEED'>('MAP');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedCompany, setSelectedCompany] = useState<CompanyNode | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'ALL' | QuadrantType>('ALL');
   const [search, setSearch] = useState('');
+  
+  // Feed State
+  const [briefing, setBriefing] = useState<IntelBriefing | null>(null);
+  const [feedLoading, setFeedLoading] = useState(false);
   
   // Globe Refs
   const focusRef = useRef<[number, number]>([0, 0]);
@@ -100,9 +105,29 @@ const MarketIntel: React.FC = () => {
     return matchesFilter && matchesSearch;
   });
 
+  // Fetch Daily Briefing on Mount (Once)
+  useEffect(() => {
+    const fetchBriefing = async () => {
+      setFeedLoading(true);
+      try {
+        const data = await getDailyIntelBriefing();
+        setBriefing(data);
+      } catch (e) {
+        console.error("Failed to load briefing", e);
+      }
+      setFeedLoading(false);
+    };
+
+    if (viewMode === 'FEED' && !briefing) {
+       fetchBriefing();
+    }
+  }, [viewMode, briefing]);
+
   // Globe Initialization
   useEffect(() => {
-    let phi = 0;
+    if (viewMode !== 'MAP' || !canvasRef.current) return;
+
+    let phi = phiRef.current;
     let width = 0;
     const onResize = () => canvasRef.current && (width = canvasRef.current.offsetWidth);
     window.addEventListener('resize', onResize);
@@ -139,6 +164,7 @@ const MarketIntel: React.FC = () => {
         state.phi = phi;
         state.width = width * 2;
         state.height = width * 2;
+        phiRef.current = phi;
       },
     });
 
@@ -146,7 +172,7 @@ const MarketIntel: React.FC = () => {
       globe.destroy();
       window.removeEventListener('resize', onResize);
     };
-  }, [selectedCompany, filteredCompanies]);
+  }, [viewMode, selectedCompany, filteredCompanies]);
 
   const handleSelect = async (company: CompanyNode) => {
     setSelectedCompany(company);
@@ -181,168 +207,280 @@ const MarketIntel: React.FC = () => {
   return (
     <div className="h-[calc(100vh-100px)] flex flex-col animate-fade-in relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
       
-      {/* 3D Globe Canvas */}
-      <div className="absolute inset-0 z-0 flex items-center justify-center bg-gray-50/30">
-        <canvas
-          ref={canvasRef}
-          style={{ width: '100%', height: '100%', maxWidth: '800px', aspectRatio: '1' }}
-          className="cursor-move"
-        />
+      {/* Top Toggle */}
+      <div className="absolute top-6 left-6 z-40 flex items-center gap-2 bg-white/80 backdrop-blur-md p-1 rounded-xl border border-gray-200 shadow-sm">
+         <button 
+           onClick={() => setViewMode('MAP')}
+           className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-2 ${viewMode === 'MAP' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+         >
+            <Globe size={14} /> Global Map
+         </button>
+         <button 
+           onClick={() => setViewMode('FEED')}
+           className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-2 ${viewMode === 'FEED' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+         >
+            <Newspaper size={14} /> Daily Briefing
+         </button>
       </div>
 
-      {/* Header / Filters Overlay */}
-      <div className="absolute top-6 left-6 right-6 z-20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pointer-events-none">
-        <div className="pointer-events-auto">
-            <div className="flex items-center gap-2 text-indigo-600 mb-1 font-bold text-sm uppercase tracking-wider">
-               <Globe size={16} /> Planetary Intelligence
+      {/* --- VIEW MODE: FEED --- */}
+      {viewMode === 'FEED' && (
+         <div className="flex-1 overflow-y-auto bg-gray-50 p-6 md:p-12 pt-24">
+            <div className="max-w-4xl mx-auto">
+               <div className="mb-10 text-center">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-700 text-xs font-bold mb-3 uppercase tracking-wider">
+                     <Zap size={14} /> Live Intelligence
+                  </div>
+                  <h1 className="text-4xl font-bold text-gray-900 mb-2">Material Science Daily</h1>
+                  <p className="text-gray-500">Curated updates on commercial moves, breakthroughs, and policy.</p>
+               </div>
+
+               {feedLoading ? (
+                  <div className="py-20 text-center">
+                     <div className="inline-block relative">
+                        <Loader2 className="animate-spin text-indigo-500 w-12 h-12" />
+                     </div>
+                     <p className="mt-4 text-gray-500 font-medium">Scouring global news sources...</p>
+                     <p className="text-xs text-gray-400 mt-2">Gemini is analyzing market data (approx 15s)</p>
+                  </div>
+               ) : briefing ? (
+                  <div className="space-y-12 animate-fade-in">
+                     {/* Summary Card */}
+                     <div className="bg-white border border-gray-200 p-8 rounded-2xl shadow-sm text-center">
+                        <h2 className="text-lg font-bold text-gray-900 mb-2">{briefing.date} Executive Summary</h2>
+                        <p className="text-gray-600 leading-relaxed italic">"{briefing.summary}"</p>
+                     </div>
+
+                     {/* Section 1: Commercial */}
+                     <div>
+                        <h3 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-6 pb-2 border-b border-gray-200">
+                           <Briefcase className="text-emerald-600" /> Corporate Moves
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           {briefing.commercialMoves.map((news, i) => (
+                              <a key={i} href={news.url} target="_blank" rel="noreferrer" className="block bg-white p-5 rounded-xl border border-gray-200 hover:shadow-md hover:border-emerald-200 transition-all group">
+                                 <h4 className="font-bold text-gray-900 mb-2 group-hover:text-emerald-700 line-clamp-2">{news.title}</h4>
+                                 <p className="text-sm text-gray-500 mb-4 line-clamp-3">{news.snippet}</p>
+                                 <div className="flex justify-between items-center text-xs text-gray-400 font-medium uppercase tracking-wide">
+                                    <span>{news.source}</span>
+                                    <ExternalLink size={12} />
+                                 </div>
+                              </a>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* Section 2: Research */}
+                     <div>
+                        <h3 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-6 pb-2 border-b border-gray-200">
+                           <FlaskConical className="text-purple-600" /> Lab Breakthroughs
+                        </h3>
+                        <div className="grid grid-cols-1 gap-4">
+                           {briefing.researchBreakthroughs.map((news, i) => (
+                              <a key={i} href={news.url} target="_blank" rel="noreferrer" className="flex flex-col md:flex-row gap-6 bg-white p-6 rounded-xl border border-gray-200 hover:shadow-md hover:border-purple-200 transition-all group">
+                                 <div className="flex-1">
+                                    <h4 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-purple-700">{news.title}</h4>
+                                    <p className="text-sm text-gray-600 leading-relaxed">{news.snippet}</p>
+                                 </div>
+                                 <div className="flex items-center md:flex-col justify-center gap-2 text-xs text-gray-400 font-bold uppercase min-w-[100px] text-right md:text-center md:border-l border-gray-100 md:pl-6">
+                                    <div className="p-2 bg-purple-50 text-purple-600 rounded-lg"><Microscope size={20} /></div>
+                                    <span>{news.source}</span>
+                                 </div>
+                              </a>
+                           ))}
+                        </div>
+                     </div>
+
+                     {/* Section 3: Policy */}
+                     <div>
+                        <h3 className="flex items-center gap-2 text-xl font-bold text-gray-900 mb-6 pb-2 border-b border-gray-200">
+                           <Gavel className="text-amber-600" /> Policy & Regulation
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                           {briefing.policyUpdates.map((news, i) => (
+                              <a key={i} href={news.url} target="_blank" rel="noreferrer" className="block bg-amber-50/50 p-5 rounded-xl border border-amber-100 hover:bg-white hover:shadow-md transition-all group">
+                                 <h4 className="font-bold text-gray-900 mb-2 group-hover:text-amber-800 text-sm line-clamp-2">{news.title}</h4>
+                                 <p className="text-xs text-gray-600 mb-3 line-clamp-3">{news.snippet}</p>
+                                 <div className="text-[10px] text-amber-600 font-bold uppercase">{news.source}</div>
+                              </a>
+                           ))}
+                        </div>
+                     </div>
+                  </div>
+               ) : (
+                  <div className="text-center text-red-500">Failed to load briefing. Check API Key.</div>
+               )}
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Global Strategy Map</h1>
-        </div>
-        
-        <div className="flex flex-wrap gap-2 pointer-events-auto bg-white/80 backdrop-blur-md p-2 rounded-xl border border-gray-200 shadow-sm">
-           <button 
-             onClick={() => setFilter('ALL')}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${filter === 'ALL' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-           >
-             ALL
-           </button>
-           <button 
-             onClick={() => setFilter(QuadrantType.BIO_BIO)}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ${filter === QuadrantType.BIO_BIO ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:bg-gray-100'}`}
-           >
-             <div className="w-2 h-2 rounded-full bg-emerald-500"></div> BIO-BIO
-           </button>
-           <button 
-             onClick={() => setFilter(QuadrantType.BIO_DURABLE)}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ${filter === QuadrantType.BIO_DURABLE ? 'bg-orange-100 text-orange-700' : 'text-gray-500 hover:bg-gray-100'}`}
-           >
-             <div className="w-2 h-2 rounded-full bg-orange-500"></div> DURABLE
-           </button>
-           <button 
-             onClick={() => setFilter(QuadrantType.NEXT_GEN)}
-             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ${filter === QuadrantType.NEXT_GEN ? 'bg-teal-100 text-teal-700' : 'text-gray-500 hover:bg-gray-100'}`}
-           >
-             <div className="w-2 h-2 rounded-full bg-teal-500"></div> NEXT-GEN
-           </button>
-        </div>
-      </div>
+         </div>
+      )}
 
-      {/* Search Bar Overlay */}
-      <div className="absolute top-28 left-6 z-20 w-64 pointer-events-auto">
-         <div className="relative group">
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
-            <input 
-               value={search}
-               onChange={(e) => setSearch(e.target.value)}
-               placeholder="Find company..."
-               className="w-full bg-white/80 backdrop-blur-md border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm"
+
+      {/* --- VIEW MODE: MAP --- */}
+      {viewMode === 'MAP' && (
+      <>
+        {/* 3D Globe Canvas */}
+        <div className="absolute inset-0 z-0 flex items-center justify-center bg-gray-50/30">
+            <canvas
+            ref={canvasRef}
+            style={{ width: '100%', height: '100%', maxWidth: '800px', aspectRatio: '1' }}
+            className="cursor-move"
             />
-         </div>
-      </div>
+        </div>
 
-      {/* Right Sidebar: Company List */}
-      <div className="absolute right-6 top-24 bottom-6 w-80 bg-white/90 backdrop-blur-xl border border-white/50 shadow-notion rounded-2xl flex flex-col z-20 overflow-hidden">
-         <div className="p-4 border-b border-gray-100 bg-white/50 flex justify-between items-center">
-            <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
-               <Navigation size={14} /> {filteredCompanies.length} Active Players
-            </h3>
-            {search && (
-               <button onClick={() => setSearch('')} className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1">
-                  <X size={12} /> Clear
-               </button>
-            )}
-         </div>
-         
-         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-            {filteredCompanies.map(c => (
-               <button
-                  key={c.id}
-                  onClick={() => handleSelect(c)}
-                  className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group ${
-                     selectedCompany?.id === c.id 
-                       ? 'bg-white shadow-md ring-1 ring-gray-200 scale-[1.02] z-10' 
-                       : 'hover:bg-white/60 hover:scale-[1.02]'
-                  }`}
-               >
-                  <div className={`w-1.5 h-8 rounded-full ${getQuadrantColor(c.quadrant)}`}></div>
-                  <div className="flex-1 min-w-0">
-                     <div className="flex justify-between">
-                        <div className="font-bold text-gray-800 text-sm truncate">{c.name}</div>
-                        {selectedCompany?.id === c.id && <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>}
-                     </div>
-                     <div className="text-[10px] text-gray-500 truncate">{c.location}</div>
-                  </div>
-               </button>
-            ))}
-         </div>
-      </div>
-
-      {/* Floating Detail Card (Bottom Left) */}
-      {selectedCompany && (
-         <div className="absolute left-6 bottom-6 w-96 bg-white/95 backdrop-blur-xl border border-white/50 shadow-2xl rounded-2xl p-6 animate-fade-in z-30">
+        {/* Filters Overlay */}
+        <div className="absolute top-6 right-6 z-20 flex flex-col items-end gap-2 pointer-events-none">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2 pointer-events-auto">Global Strategy Map</h1>
+            <div className="flex flex-wrap gap-2 pointer-events-auto bg-white/80 backdrop-blur-md p-2 rounded-xl border border-gray-200 shadow-sm">
             <button 
-              onClick={() => setSelectedCompany(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full p-1"
+                onClick={() => setFilter('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${filter === 'ALL' ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
             >
-               <X size={16} />
+                ALL
             </button>
+            <button 
+                onClick={() => setFilter(QuadrantType.BIO_BIO)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ${filter === QuadrantType.BIO_BIO ? 'bg-emerald-100 text-emerald-700' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+                <div className="w-2 h-2 rounded-full bg-emerald-500"></div> BIO-BIO
+            </button>
+            <button 
+                onClick={() => setFilter(QuadrantType.BIO_DURABLE)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ${filter === QuadrantType.BIO_DURABLE ? 'bg-orange-100 text-orange-700' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+                <div className="w-2 h-2 rounded-full bg-orange-500"></div> DURABLE
+            </button>
+            <button 
+                onClick={() => setFilter(QuadrantType.NEXT_GEN)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 ${filter === QuadrantType.NEXT_GEN ? 'bg-teal-100 text-teal-700' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+                <div className="w-2 h-2 rounded-full bg-teal-500"></div> NEXT-GEN
+            </button>
+            </div>
+        </div>
+
+        {/* Search Bar Overlay */}
+        <div className="absolute top-28 right-6 z-20 w-64 pointer-events-auto">
+            <div className="relative group">
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                <input 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Find by name or product..."
+                className="w-full bg-white/80 backdrop-blur-md border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-sm"
+                />
+            </div>
+        </div>
+
+        {/* Right Sidebar: Company List */}
+        <div className="absolute right-6 top-40 bottom-6 w-80 bg-white/90 backdrop-blur-xl border border-white/50 shadow-notion rounded-2xl flex flex-col z-20 overflow-hidden pointer-events-auto">
+            <div className="p-4 border-b border-gray-100 bg-white/50 flex justify-between items-center">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2 text-sm">
+                <Navigation size={14} /> {filteredCompanies.length} Active Players
+                </h3>
+                {search && (
+                <button onClick={() => setSearch('')} className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1">
+                    <X size={12} /> Clear
+                </button>
+                )}
+            </div>
             
-            <div className="flex items-center gap-3 mb-5">
-               <div className="p-3 bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-sm border border-gray-100 text-indigo-600">
-                  <Factory size={24} />
-               </div>
-               <div>
-                  <h2 className="text-xl font-bold text-gray-900 leading-none mb-1">{selectedCompany.name}</h2>
-                  <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
-                     <MapPin size={10} /> {selectedCompany.location}
-                  </div>
-               </div>
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {filteredCompanies.length === 0 && (
+                <div className="text-center py-10 px-4 text-gray-400 text-xs">
+                    No companies match your search. Try "Leather" or "Packaging".
+                </div>
+                )}
+                {filteredCompanies.map(c => (
+                <button
+                    key={c.id}
+                    onClick={() => handleSelect(c)}
+                    className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group ${
+                        selectedCompany?.id === c.id 
+                        ? 'bg-white shadow-md ring-1 ring-gray-200 scale-[1.02] z-10' 
+                        : 'hover:bg-white/60 hover:scale-[1.02]'
+                    }`}
+                >
+                    <div className={`w-1.5 h-8 rounded-full ${getQuadrantColor(c.quadrant)}`}></div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex justify-between">
+                            <div className="font-bold text-gray-800 text-sm truncate">{c.name}</div>
+                            {selectedCompany?.id === c.id && <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>}
+                        </div>
+                        <div className="text-[10px] text-gray-500 truncate">{c.product}</div>
+                    </div>
+                </button>
+                ))}
             </div>
+        </div>
 
-            <div className="space-y-4">
-               <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100/50">
-                     <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase mb-1">
-                        {getQuadrantIcon(selectedCompany.quadrant)} Quadrant
-                     </div>
-                     <div className="text-xs font-bold text-gray-800">{selectedCompany.quadrant}</div>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100/50">
-                     <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Core Product</div>
-                     <div className="text-xs font-bold text-gray-800 truncate" title={selectedCompany.product}>{selectedCompany.product}</div>
-                  </div>
-               </div>
+        {/* Floating Detail Card (Bottom Left) */}
+        {selectedCompany && (
+            <div className="absolute left-6 bottom-6 w-96 bg-white/95 backdrop-blur-xl border border-white/50 shadow-2xl rounded-2xl p-6 animate-fade-in z-30">
+                <button 
+                onClick={() => setSelectedCompany(null)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-50 rounded-full p-1"
+                >
+                <X size={16} />
+                </button>
+                
+                <div className="flex items-center gap-3 mb-5">
+                <div className="p-3 bg-gradient-to-br from-gray-50 to-white rounded-xl shadow-sm border border-gray-100 text-indigo-600">
+                    <Factory size={24} />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold text-gray-900 leading-none mb-1">{selectedCompany.name}</h2>
+                    <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
+                        <MapPin size={10} /> {selectedCompany.location}
+                    </div>
+                </div>
+                </div>
 
-               <div className="p-3 bg-gray-50/50 rounded-xl border border-gray-100">
-                  <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Strategic Focus</div>
-                  <p className="text-sm text-gray-600 leading-relaxed">{selectedCompany.strategy}</p>
-               </div>
+                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-100/50">
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase mb-1">
+                            {getQuadrantIcon(selectedCompany.quadrant)} Quadrant
+                        </div>
+                        <div className="text-xs font-bold text-gray-800">{selectedCompany.quadrant}</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-xl border border-gray-100/50">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Core Product</div>
+                        <div className="text-xs font-bold text-gray-800 truncate" title={selectedCompany.product}>{selectedCompany.product}</div>
+                    </div>
+                </div>
 
-               <div>
-                  <div className="flex items-center justify-between mb-2">
-                     <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase">
-                        <Zap size={10} /> Live Intelligence Feed
-                     </div>
-                     {loading && <Loader2 size={12} className="animate-spin text-indigo-500" />}
-                  </div>
-                  
-                  <div className="space-y-2 max-h-32 overflow-y-auto pr-1 scrollbar-thin">
-                     {!loading && news.length === 0 && (
-                        <div className="text-xs text-gray-400 italic p-2 text-center">Select to load intel.</div>
-                     )}
-                     {news.map((n, i) => (
-                        <a key={i} href={n.url} target="_blank" rel="noreferrer" className="block p-2.5 bg-white rounded-lg border border-gray-100 hover:border-indigo-200 hover:shadow-sm transition-all group">
-                           <div className="text-xs font-medium text-gray-800 line-clamp-1 group-hover:text-indigo-600">{n.title}</div>
-                           <div className="flex justify-between mt-1">
-                              <div className="text-[10px] text-gray-400">{n.source}</div>
-                              <ExternalLink size={10} className="text-gray-300 group-hover:text-indigo-400" />
-                           </div>
-                        </a>
-                     ))}
-                  </div>
-               </div>
+                <div className="p-3 bg-gray-50/50 rounded-xl border border-gray-100">
+                    <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Strategic Focus</div>
+                    <p className="text-sm text-gray-600 leading-relaxed">{selectedCompany.strategy}</p>
+                </div>
+
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase">
+                            <Zap size={10} /> Live Intelligence Feed
+                        </div>
+                        {loading && <Loader2 size={12} className="animate-spin text-indigo-500" />}
+                    </div>
+                    
+                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1 scrollbar-thin">
+                        {!loading && news.length === 0 && (
+                            <div className="text-xs text-gray-400 italic p-2 text-center">Select to load intel.</div>
+                        )}
+                        {news.map((n, i) => (
+                            <a key={i} href={n.url} target="_blank" rel="noreferrer" className="block p-2.5 bg-white rounded-lg border border-gray-100 hover:border-indigo-200 hover:shadow-sm transition-all group">
+                            <div className="text-xs font-medium text-gray-800 line-clamp-1 group-hover:text-indigo-600">{n.title}</div>
+                            <div className="flex justify-between mt-1">
+                                <div className="text-[10px] text-gray-400">{n.source}</div>
+                                <ExternalLink size={10} className="text-gray-300 group-hover:text-indigo-400" />
+                            </div>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+                </div>
             </div>
-         </div>
+        )}
+      </>
       )}
     </div>
   );

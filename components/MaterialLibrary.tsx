@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
-import { BookMarked, Search, Filter, LayoutGrid, List, Calendar, Tag, Factory } from 'lucide-react';
-import { LibraryItem } from '../types';
+import React, { useState, useMemo } from 'react';
+import { BookMarked, Search, Filter, LayoutGrid, List, Calendar, Tag, Factory, X } from 'lucide-react';
+import { LibraryItem, QuadrantType } from '../types';
 import { SharedContext } from '../App';
 
 interface MaterialLibraryProps {
@@ -12,8 +12,35 @@ interface MaterialLibraryProps {
 const MaterialLibrary: React.FC<MaterialLibraryProps> = ({ items, onNavigate }) => {
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [quadrantFilter, setQuadrantFilter] = useState<QuadrantType | 'ALL'>('ALL');
+  const [applicationFilter, setApplicationFilter] = useState<string>('ALL');
 
-  const filteredItems = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()));
+  // Extract unique applications for the filter dropdown
+  const allApplications = useMemo(() => {
+    const apps = new Set<string>();
+    items.forEach(item => {
+      item.applications.forEach(app => apps.add(app));
+    });
+    return Array.from(apps).sort();
+  }, [items]);
+
+  const filteredItems = items.filter(i => {
+    const matchesSearch = i.name.toLowerCase().includes(search.toLowerCase()) || 
+                          i.description.toLowerCase().includes(search.toLowerCase());
+    const matchesQuadrant = quadrantFilter === 'ALL' || i.quadrant === quadrantFilter;
+    const matchesApplication = applicationFilter === 'ALL' || i.applications.includes(applicationFilter);
+
+    return matchesSearch && matchesQuadrant && matchesApplication;
+  });
+
+  const clearFilters = () => {
+      setQuadrantFilter('ALL');
+      setApplicationFilter('ALL');
+      setSearch('');
+  };
+
+  const activeFilterCount = (quadrantFilter !== 'ALL' ? 1 : 0) + (applicationFilter !== 'ALL' ? 1 : 0);
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in pb-20">
@@ -41,32 +68,97 @@ const MaterialLibrary: React.FC<MaterialLibraryProps> = ({ items, onNavigate }) 
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-4 mb-8">
-         <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-            <input 
-               value={search}
-               onChange={(e) => setSearch(e.target.value)}
-               placeholder="Search registry..."
-               className="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-gray-400"
-            />
+      <div className="flex flex-col gap-4 mb-8">
+         <div className="flex items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                <input 
+                   value={search}
+                   onChange={(e) => setSearch(e.target.value)}
+                   placeholder="Search registry..."
+                   className="w-full bg-white border border-gray-200 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-gray-400"
+                />
+            </div>
+            <button 
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium transition-colors ${showFilters || activeFilterCount > 0 ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+                <Filter size={16} /> Filters
+                {activeFilterCount > 0 && (
+                    <span className="bg-indigo-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
+                        {activeFilterCount}
+                    </span>
+                )}
+            </button>
          </div>
-         <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50">
-            <Filter size={16} /> Filter
-         </button>
+
+         {/* Expanded Filters Panel */}
+         {showFilters && (
+            <div className="p-5 bg-gray-50 border border-gray-200 rounded-xl animate-fade-in">
+                <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                        <Filter size={12} /> Active Filters
+                    </h4>
+                    <button onClick={clearFilters} className="text-xs text-gray-500 hover:text-red-600 flex items-center gap-1">
+                        <X size={12} /> Reset All
+                    </button>
+                </div>
+                <div className="flex flex-wrap gap-6">
+                    {/* Quadrant Filter */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-700">Quadrant</label>
+                        <select 
+                            value={quadrantFilter} 
+                            onChange={(e) => setQuadrantFilter(e.target.value as QuadrantType | 'ALL')}
+                            className="bg-white border border-gray-200 text-sm rounded-lg p-2.5 min-w-[200px] outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 transition-all cursor-pointer"
+                        >
+                            <option value="ALL">All Quadrants</option>
+                            <option value={QuadrantType.BIO_BIO}>BIO-BIO (Green)</option>
+                            <option value={QuadrantType.BIO_DURABLE}>BIO-DURABLE (Rust)</option>
+                            <option value={QuadrantType.FOSSIL_BIO}>FOSSIL-BIO (Sand)</option>
+                            <option value={QuadrantType.NEXT_GEN}>NEXT-GEN (Teal)</option>
+                        </select>
+                    </div>
+
+                    {/* Application Filter */}
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-gray-700">Application</label>
+                         <select 
+                            value={applicationFilter} 
+                            onChange={(e) => setApplicationFilter(e.target.value)}
+                            className="bg-white border border-gray-200 text-sm rounded-lg p-2.5 min-w-[200px] outline-none focus:border-indigo-300 focus:ring-2 focus:ring-indigo-50 transition-all cursor-pointer"
+                        >
+                            <option value="ALL">All Applications</option>
+                            {allApplications.map(app => (
+                                <option key={app} value={app}>{app}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+            </div>
+         )}
       </div>
 
       {filteredItems.length === 0 ? (
          <div className="text-center py-20 bg-gray-50 rounded-xl border border-dashed border-gray-200">
             <BookMarked className="mx-auto text-gray-300 mb-4" size={48} />
-            <h3 className="text-gray-900 font-medium">Registry is empty</h3>
-            <p className="text-gray-500 text-sm mt-1">Use the Innovation Lab to generate and save new materials.</p>
-            <button 
-               onClick={() => onNavigate('innovation')}
-               className="mt-4 px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-gray-800"
-            >
-               Go to Lab
-            </button>
+            <h3 className="text-gray-900 font-medium">No materials found</h3>
+            <p className="text-gray-500 text-sm mt-1">Adjust your filters or generate new materials in the Lab.</p>
+            {(search || quadrantFilter !== 'ALL' || applicationFilter !== 'ALL') ? (
+                <button 
+                    onClick={clearFilters}
+                    className="mt-4 px-6 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:bg-gray-50"
+                >
+                    Clear Filters
+                </button>
+            ) : (
+                <button 
+                    onClick={() => onNavigate('innovation')}
+                    className="mt-4 px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-gray-800"
+                >
+                    Go to Lab
+                </button>
+            )}
          </div>
       ) : (
          <div className={`${view === 'grid' ? 'grid grid-cols-1 md:grid-cols-3 gap-6' : 'space-y-4'}`}>

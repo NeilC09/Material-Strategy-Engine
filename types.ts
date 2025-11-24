@@ -42,6 +42,15 @@ export interface NewsItem {
   url: string;
   snippet: string;
   source: string;
+  date?: string;
+}
+
+export interface IntelBriefing {
+  date: string;
+  summary: string;
+  commercialMoves: NewsItem[];
+  researchBreakthroughs: NewsItem[];
+  policyUpdates: NewsItem[];
 }
 
 export interface Patent {
