@@ -7,10 +7,6 @@ import {
 import { QuadrantType, NewsItem, ChatMessage, MaterialFamily, SharedContext } from '../types';
 import { searchMarketIntel, askQuadrantQuestion, discoverEmergingPolymers } from '../services/geminiService';
 
-interface QuadrantGridProps {
-  onNavigate: (tab: string, data?: SharedContext) => void;
-}
-
 interface QuadrantDetail {
   id: QuadrantType;
   title: string;
@@ -150,11 +146,10 @@ const quadrantData: Record<string, QuadrantDetail> = {
   }
 };
 
-const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
+const QuadrantGrid: React.FC<{ onNavigate: (tab: string, data?: SharedContext) => void }> = ({ onNavigate }) => {
   const [selectedId, setSelectedId] = useState<QuadrantType | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'engineering' | 'players' | 'intel'>('overview');
   
-  // Data Fetching States
   const [intelData, setIntelData] = useState<NewsItem[]>([]);
   const [intelLoading, setIntelLoading] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -166,7 +161,6 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
 
   const activeData = selectedId ? quadrantData[selectedId] : null;
 
-  // Reset discovery when changing quadrants
   useEffect(() => {
     setDiscoveredFamilies([]);
   }, [selectedId]);
@@ -218,14 +212,12 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
 
   return (
     <div className="relative h-full w-full p-6 overflow-y-auto bg-obsidian-900">
-      {/* HEADER */}
       <div className="mb-12 animate-fade-in">
         <div className="h-px w-full bg-gradient-to-r from-white/20 to-transparent mb-8"></div>
         <h1 className="text-5xl font-bold text-white mb-2 tracking-tight font-mono uppercase">Material Ecosystem</h1>
         <p className="text-gray-400 font-mono text-sm">Initialize quadrant analysis protocol. Select sector to explore.</p>
       </div>
 
-      {/* GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
         {Object.values(quadrantData).map((q) => {
           const Icon = q.icon;
@@ -235,7 +227,6 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
               onClick={() => { setSelectedId(q.id); setActiveTab('overview'); }}
               className={`group cursor-pointer bg-obsidian-800 border ${q.borderColor} rounded-sm p-8 hover:bg-white/5 transition-all hover:shadow-glow relative overflow-hidden`}
             >
-              {/* Scanline effect on hover */}
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
               
               <div className="flex items-start justify-between mb-6 relative z-10">
@@ -256,14 +247,12 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
         })}
       </div>
 
-      {/* SIDE PEEK OVERLAY */}
       {selectedId && activeData && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-end" onClick={() => setSelectedId(null)}>
           <div 
             className="w-full max-w-3xl bg-obsidian-800 h-full shadow-[0_0_50px_rgba(34,211,238,0.1)] animate-fade-in flex flex-col border-l border-white/10"
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="px-8 py-8 border-b border-white/10 flex items-start justify-between bg-obsidian-800">
               <div>
                  <div className="flex items-center gap-2 text-gray-500 text-xs font-mono mb-3 uppercase tracking-widest">
@@ -281,7 +270,6 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Tabs */}
             <div className="px-8 border-b border-white/10 flex gap-8 bg-obsidian-800/50 backdrop-blur-md sticky top-0 z-20">
               {['overview', 'engineering', 'players', 'intel'].map(t => (
                 <button
@@ -294,11 +282,9 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
               ))}
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-8 bg-obsidian-900">
               {activeTab === 'overview' && (
                 <div className="space-y-10">
-                   {/* Stats Block */}
                    <div className="grid grid-cols-3 gap-px bg-white/10 border border-white/10">
                       <div className="bg-obsidian-800 p-6 text-center group hover:bg-white/5 transition-colors">
                         <div className="text-[10px] text-gray-500 uppercase font-bold mb-2 tracking-widest">Sustainability</div>
@@ -314,7 +300,6 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
                       </div>
                    </div>
 
-                   {/* Families */}
                    <div>
                      <div className="flex justify-between items-center mb-6 pb-2 border-b border-white/10">
                         <h3 className="text-sm font-bold text-white uppercase tracking-widest flex items-center gap-2"><Layers size={14} /> Material Families</h3>
@@ -329,36 +314,28 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
                      </div>
                      
                      <div className="grid gap-4">
-                       {/* Standard Families */}
                        {activeData.families.map((fam, i) => (
                          <div key={`std-${i}`} className="group bg-obsidian-800 border border-white/10 p-5 hover:border-white/30 transition-colors">
                             <div className="flex justify-between items-center mb-2">
                                <span className="font-bold text-white text-lg">{fam.name}</span>
                                <div className="opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity">
-                                  <button 
-                                    onClick={() => onNavigate('workstation', { material: fam.name, workstationStep: 'build' })}
-                                    className="text-[10px] bg-white text-black px-3 py-1.5 font-bold uppercase hover:bg-gray-200 flex items-center gap-2"
-                                  >
+                                  <button onClick={() => onNavigate('workstation', { material: fam.name, workstationStep: 'build' })} className="text-[10px] bg-white text-black px-3 py-1.5 font-bold uppercase hover:bg-gray-200 flex items-center gap-2">
                                     <Factory size={12} /> Build
                                   </button>
-                                  <button 
-                                    onClick={() => onNavigate('patents', { query: fam.name })}
-                                    className="text-[10px] border border-white/30 text-white px-3 py-1.5 font-bold uppercase hover:bg-white/10 flex items-center gap-2"
-                                  >
+                                  <button onClick={() => onNavigate('patents', { query: fam.name })} className="text-[10px] border border-white/30 text-white px-3 py-1.5 font-bold uppercase hover:bg-white/10 flex items-center gap-2">
                                     <FileText size={12} /> IP
                                   </button>
                                </div>
                             </div>
                             <p className="text-sm text-gray-400 font-mono mb-3">{fam.description}</p>
                             <div className="flex flex-wrap gap-2">
-                              {fam.commonGrades.map(g => (
+                              {Array.isArray(fam.commonGrades) && fam.commonGrades.map(g => (
                                 <span key={g} className="text-[10px] bg-white/5 border border-white/10 text-gray-300 px-2 py-1 font-mono">{g}</span>
                               ))}
                             </div>
                          </div>
                        ))}
 
-                       {/* Discovered Families */}
                        {discoveredFamilies.map((fam, i) => (
                          <div key={`disc-${i}`} className="group bg-cyan-900/10 border border-cyan-500/30 p-5 hover:bg-cyan-900/20 transition-colors animate-fade-in">
                             <div className="flex justify-between items-center mb-2">
@@ -366,17 +343,14 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
                                   <Sparkles size={14} /> {fam.name}
                                </span>
                                <div className="opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity">
-                                  <button 
-                                    onClick={() => onNavigate('workstation', { material: fam.name, workstationStep: 'build' })}
-                                    className="text-[10px] bg-cyan-400 text-black px-3 py-1.5 font-bold uppercase hover:bg-cyan-300 flex items-center gap-2"
-                                  >
+                                  <button onClick={() => onNavigate('workstation', { material: fam.name, workstationStep: 'build' })} className="text-[10px] bg-cyan-400 text-black px-3 py-1.5 font-bold uppercase hover:bg-cyan-300 flex items-center gap-2">
                                     <Factory size={12} /> Build
                                   </button>
                                </div>
                             </div>
                             <p className="text-sm text-cyan-200/70 font-mono mb-3">{fam.description}</p>
                             <div className="flex flex-wrap gap-2">
-                              {fam.commonGrades.map(g => (
+                              {Array.isArray(fam.commonGrades) && fam.commonGrades.map(g => (
                                 <span key={g} className="text-[10px] bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 px-2 py-1 font-mono">{g}</span>
                               ))}
                             </div>
@@ -437,7 +411,6 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
 
               {activeTab === 'intel' && (
                 <div className="space-y-6">
-                   {/* Embedded Chat */}
                    <div className="border border-white/10 bg-black/40 p-6">
                       <div className="max-h-60 overflow-y-auto space-y-4 mb-4 scrollbar-thin scrollbar-thumb-gray-700">
                          {chatMessages.map(m => (
@@ -461,7 +434,6 @@ const QuadrantGrid: React.FC<QuadrantGridProps> = ({ onNavigate }) => {
                       </form>
                    </div>
 
-                   {/* News Feed */}
                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-8 mb-4 border-b border-white/10 pb-2">Latest Intelligence</h4>
                    {intelLoading && <div className="text-xs font-mono text-gray-500">FETCHING_DATAFEED...</div>}
                    <div className="space-y-3">

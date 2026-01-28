@@ -53,6 +53,16 @@ export interface IntelBriefing {
   policyUpdates: NewsItem[];
 }
 
+export interface ResearchReportData {
+  title: string;
+  summary: string;
+  marketTrends: { trend: string; impact: string }[];
+  consumerDemand: { segment: string; driver: string }[];
+  technicalBarriers: string[];
+  keyPlayers: { name: string; activity: string }[];
+  sources: { title: string; url: string }[];
+}
+
 export interface Patent {
   title: string;
   number: string;
@@ -99,16 +109,15 @@ export interface MaterialRecipe {
   properties: { name: string; value: string }[];
   sustainabilityScore: number;
   applications: string[];
-  // NEW: Fields for Patent Extraction
-  processingSteps?: string[]; // "How to Cook"
-  variations?: { name: string; description: string }[]; // "Chef's Notes"
+  processingSteps?: string[];
+  variations?: { name: string; description: string }[];
 }
 
 export interface LibraryItem extends MaterialRecipe {
   id: string;
   dateCreated: Date;
   image?: string; // Base64
-  category: string; // e.g., "Mycelium Composites"
+  category: string;
 }
 
 export interface MaterialFamily {
@@ -127,7 +136,29 @@ export interface Manufacturer {
   website: string;
 }
 
-// NEW: Unified Project State for Workstation
+// NEW: LCA Data for EcoImpact
+export interface LCAData {
+  carbonFootprint: number; // kg CO2e / kg
+  waterUsage: number; // L / kg
+  circularityScore: number; // 0-10
+  energyConsumption: number; // MJ / kg
+  comparison: {
+     material: string;
+     carbon: number; // relative % or absolute
+  }[];
+  verdict: string;
+}
+
+// NEW: CMF Data
+export interface CMFVariant {
+  id: string;
+  name: string;
+  finish: string; // Relaxed from union type to string to support combinations (e.g. "Matte Sandblasted")
+  color: string;
+  description: string;
+  imageUrl?: string;
+}
+
 export interface ProjectState {
   id: string;
   name: string;
@@ -137,18 +168,20 @@ export interface ProjectState {
   analysis?: AnalysisResult;
   image?: string;
   selectedProcess?: string;
+  lca?: LCAData;
+  cmfVariants?: CMFVariant[];
 }
 
 export interface SharedContext {
-  material?: string; // For Analyzer and Factory
-  query?: string;    // For Patents
-  problem?: string;  // For Innovation Lab
-  workstationStep?: 'design' | 'analyze' | 'build'; // To navigate directly to a specific lab
+  material?: string;
+  query?: string;
+  problem?: string;
+  workstationStep?: 'design' | 'analyze' | 'build';
+  researchReport?: ResearchReportData;
 }
 
-// NEW: 3D Visualization Data Structure for Plotly
 export interface VisualizationData {
-  data: any[]; // Plotly Data Array
-  layout: any; // Plotly Layout Object
+  data: any[];
+  layout: any;
   explanation?: string;
 }

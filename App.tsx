@@ -7,9 +7,11 @@ import ChatInterface from './components/ChatInterface';
 import MarketIntel from './components/MarketIntel';
 import PatentHub from './components/PatentHub';
 import MaterialLibrary from './components/MaterialLibrary';
-import ResearchFeed from './components/ResearchFeed'; // NEW
+import ResearchFeed from './components/ResearchFeed';
+import ResearchReport from './components/ResearchReport';
 import { MaterialRecipe, LibraryItem, SharedContext } from './types';
-import { Search, AlertTriangle, Terminal, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, AlertTriangle, Terminal, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { generateResearchReport } from './services/geminiService';
 
 const MAX_QUERY_LENGTH = 250;
 
@@ -23,6 +25,7 @@ const App: React.FC = () => {
   const [customQuery, setCustomQuery] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [querySuccess, setQuerySuccess] = useState(false);
+  const [queryLoading, setQueryLoading] = useState(false);
 
   const handleNavigate = (tab: string, data?: SharedContext) => {
     if (data) {
@@ -43,7 +46,6 @@ const App: React.FC = () => {
   };
 
   const sanitizeInput = (input: string): string => {
-    // Strip HTML tags to prevent injection XSS
     return input.replace(/<[^>]*>?/gm, "").trim();
   };
 
@@ -59,35 +61,46 @@ const App: React.FC = () => {
     }
   };
 
-  const handleQuerySubmit = (e: React.FormEvent) => {
+  const handleQuerySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 1. Sanitize
     const sanitized = sanitizeInput(customQuery);
+    if (!sanitized || queryLoading) return;
     
-    // 2. Validate Empty
-    if (!sanitized) {
-        setValidationError("Input stream empty. Initialize protocol.");
-        return;
-    }
-    
-    // 3. Validate Length
     if (customQuery.length > MAX_QUERY_LENGTH) {
          setValidationError(`Protocol too long. Reduce complexity.`);
          return;
     }
 
-    // Execute Logic (Mock for UI purpose)
+    setQueryLoading(true);
+    setValidationError(null);
     console.log("Executing Mission Protocol:", sanitized);
-    setCustomQuery('');
-    setQuerySuccess(true);
-    
-    // Auto-dismiss success message
-    setTimeout(() => setQuerySuccess(false), 3000);
 
-    // Route to chat if specific query
-    if (sanitized.toLowerCase().includes('analyze') || sanitized.toLowerCase().includes('question')) {
+    try {
+      // Check for research/trends intent
+      const lower = sanitized.toLowerCase();
+      const isResearch = lower.includes('search') || lower.includes('research') || lower.includes('trends') || lower.includes('demand') || lower.includes('market');
+      
+      if (isResearch) {
+        const report = await generateResearchReport(sanitized);
+        handleNavigate('report', { researchReport: report });
+        setCustomQuery('');
+        setQuerySuccess(true);
+      } else if (lower.includes('analyze') || lower.includes('question')) {
         handleNavigate('chat');
+        setCustomQuery('');
+        setQuerySuccess(true);
+      } else {
+        // Fallback to chat for other generic queries
+        handleNavigate('chat');
+        setCustomQuery('');
+        setQuerySuccess(true);
+      }
+    } catch (err) {
+      setValidationError("Database link failed. Retry protocol.");
+    } finally {
+      setQueryLoading(false);
+      setTimeout(() => setQuerySuccess(false), 3000);
     }
   };
 
@@ -101,8 +114,10 @@ const App: React.FC = () => {
         return <MaterialLibrary items={libraryItems} onNavigate={handleNavigate} />;
       case 'patents':
         return <PatentHub initialQuery={sharedContext.query} />;
-      case 'research': // NEW
+      case 'research':
         return <ResearchFeed />;
+      case 'report':
+        return sharedContext.researchReport ? <ResearchReport data={sharedContext.researchReport} /> : <QuadrantGrid onNavigate={handleNavigate} />;
       case 'chat':
         return <ChatInterface />;
       case 'intel':
@@ -116,7 +131,7 @@ const App: React.FC = () => {
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 font-sans overflow-hidden">
       {/* Sidebar */}
       <div className={`${sidebarOpen ? 'w-72' : 'w-0'} transition-all duration-300 border-r border-slate-200 bg-white flex-shrink-0 overflow-hidden flex flex-col relative z-30`}>
-         <Header activeTab={activeTab} setActiveTab={setActiveTab} />
+         <Header activeTab={activeTab} onNavigate={handleNavigate} />
       </div>
 
       {/* Main Content */}
@@ -143,8 +158,9 @@ const App: React.FC = () => {
                 <input 
                     value={customQuery}
                     onChange={handleQueryChange}
+                    disabled={queryLoading}
                     placeholder="Enter custom protocol or query ecosystem..."
-                    className={`w-full bg-slate-50 border rounded-xl pl-12 pr-24 py-2.5 text-sm focus:outline-none transition-all font-mono ${
+                    className={`w-full bg-slate-50 border rounded-xl pl-12 pr-24 py-2.5 text-sm focus:outline-none transition-all font-mono disabled:opacity-50 ${
                         validationError 
                         ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-50 text-red-900 placeholder-red-300' 
                         : 'border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-50 text-slate-900'
@@ -153,7 +169,7 @@ const App: React.FC = () => {
                 
                 {/* Character Counter */}
                 <div className={`absolute right-4 top-3 text-[10px] font-bold font-mono ${customQuery.length > MAX_QUERY_LENGTH ? 'text-red-500' : 'text-slate-400'}`}>
-                    {customQuery.length}/{MAX_QUERY_LENGTH}
+                    {queryLoading ? <Loader2 size={14} className="animate-spin text-cyan-600" /> : `${customQuery.length}/${MAX_QUERY_LENGTH}`}
                 </div>
             </form>
 
@@ -161,7 +177,7 @@ const App: React.FC = () => {
             <div className="w-48 flex justify-end">
                 {validationError && (
                     <div className="flex items-center gap-2 text-xs font-bold text-red-500 animate-fade-in">
-                        <XCircle size={14} /> {validationError}
+                        <XCircle size={14} /> ERROR
                     </div>
                 )}
                 {querySuccess && (
@@ -173,7 +189,7 @@ const App: React.FC = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 bg-obsidian-950">
            {renderContent()}
         </div>
       </main>

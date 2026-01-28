@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, PenTool, Cpu } from 'lucide-react';
 import { getChatResponse } from '../services/geminiService';
 import { ChatMessage } from '../types';
 
@@ -9,12 +9,13 @@ const ChatInterface: React.FC = () => {
     {
       id: 'welcome',
       role: 'model',
-      content: "Material Strategy Engine online. How can I assist with your engineering challenges today?",
+      content: "Material Strategy Engine online. Select a persona below to begin.",
       timestamp: new Date(),
     }
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<'engineering' | 'design'>('engineering');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -35,7 +36,7 @@ const ChatInterface: React.FC = () => {
     setLoading(true);
 
     try {
-      const responseText = await getChatResponse(userMsg.content);
+      const responseText = await getChatResponse(userMsg.content, mode);
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'model', content: responseText, timestamp: new Date() }]);
     } catch (err) {
       console.error(err);
@@ -46,14 +47,33 @@ const ChatInterface: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto h-[calc(100vh-100px)] flex flex-col animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-         <div className="p-2 bg-gray-100 rounded-lg">
-            <Bot size={20} className="text-gray-700" />
+      {/* Header with Mode Toggle */}
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
+         <div className="flex items-center gap-3">
+             <div className={`p-2 rounded-lg ${mode === 'engineering' ? 'bg-cyan-50 text-cyan-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                {mode === 'engineering' ? <Cpu size={20} /> : <PenTool size={20} />}
+             </div>
+             <div>
+                <h2 className="text-base font-bold text-gray-900">
+                    {mode === 'engineering' ? 'Engineering Core' : 'Design Consultant'}
+                </h2>
+                <p className="text-xs text-gray-500">Powered by Gemini 3 Pro</p>
+             </div>
          </div>
-         <div>
-            <h2 className="text-base font-bold text-gray-900">Engineering Assistant</h2>
-            <p className="text-xs text-gray-500">Powered by Gemini 3 Pro</p>
+         
+         <div className="flex bg-gray-100 p-1 rounded-lg">
+             <button
+               onClick={() => setMode('engineering')}
+               className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${mode === 'engineering' ? 'bg-white shadow text-cyan-600' : 'text-gray-500 hover:text-gray-900'}`}
+             >
+                Engineering
+             </button>
+             <button
+               onClick={() => setMode('design')}
+               className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${mode === 'design' ? 'bg-white shadow text-indigo-600' : 'text-gray-500 hover:text-gray-900'}`}
+             >
+                Design
+             </button>
          </div>
       </div>
 
@@ -65,8 +85,8 @@ const ChatInterface: React.FC = () => {
                   {msg.role === 'user' ? (
                      <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm">You</div>
                   ) : (
-                     <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm">
-                       <Sparkles size={14} className="text-purple-600" />
+                     <div className={`w-8 h-8 bg-white border rounded-full flex items-center justify-center shadow-sm ${mode === 'engineering' ? 'border-cyan-200' : 'border-indigo-200'}`}>
+                       <Sparkles size={14} className={mode === 'engineering' ? 'text-cyan-600' : 'text-indigo-600'} />
                      </div>
                   )}
                </div>
@@ -91,10 +111,10 @@ const ChatInterface: React.FC = () => {
          {loading && (
             <div className="flex gap-4">
                <div className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm mt-1">
-                   <Sparkles size={14} className="text-purple-600" />
+                   <Loader2 size={14} className={`animate-spin ${mode === 'engineering' ? 'text-cyan-600' : 'text-indigo-600'}`} />
                </div>
                <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
-                  <Loader2 className="animate-spin" size={14} /> Processing request...
+                  Processing request...
                </div>
             </div>
          )}
@@ -108,7 +128,7 @@ const ChatInterface: React.FC = () => {
                value={input}
                onChange={(e) => setInput(e.target.value)}
                onKeyDown={(e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); }}}
-               placeholder="Ask about formulations, processing parameters, or chemical structures..."
+               placeholder={mode === 'engineering' ? "Ask about rheology, thermal properties..." : "Ask about finish trends, tactile feel, CMF..."}
                className="w-full bg-gray-50 hover:bg-gray-100 focus:bg-white border border-gray-200 rounded-xl pl-4 pr-12 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-100 focus:border-gray-300 resize-none transition-all"
                rows={1}
                style={{ minHeight: '52px' }}
@@ -122,7 +142,7 @@ const ChatInterface: React.FC = () => {
             </button>
          </form>
          <div className="text-[10px] text-center text-gray-400 mt-2 font-medium">
-            AI responses are based on available engineering data. Verify critical parameters.
+            AI responses vary based on active persona.
          </div>
       </div>
     </div>
